@@ -7,7 +7,7 @@ import re
 import time
 import traceback
 from functools import wraps
-import ssh.log as log
+from sshv import log as log
 import os
 from stat import S_ISDIR as isdir
 import logging
@@ -60,13 +60,15 @@ def prt_log(conn, str_, warning_level):
     :param print_str: Strings to be printed and recorded
     """
     logger = get_logger()
-    logging.error(str(str_))
     if warning_level == 0:
+        logging.info(str(str_))
         logger.write_to_log(conn, 'INFO', 'INFO', 'finish', 'output', str_)
     elif warning_level == 1:
+        logging.warning(str(str_))
         logger.write_to_log(conn, 'INFO', 'WARNING', 'fail', 'output', str_)
     elif warning_level == 2:
         logger.write_to_log(conn, 'INFO', 'ERROR', 'exit', 'output', str_)
+        logging.error(str(str_))
         sys.exit()
 
 
@@ -459,6 +461,11 @@ class ConfFile(object):
         return self.config["kind"]
 
     @deco_yaml_dict
+    def get_number_of_times(self):
+        return self.config["times"]
+
+
+    @deco_yaml_dict
     def get_interface_inf(self):
         scenario_config = self.config["spof_scenario"]
         down_interface_host = scenario_config["down_interface_host"]
@@ -512,6 +519,5 @@ class ConfFile(object):
         port = down_host["port"]
 
         return {"ip":ip, "port":port}
-
 
 

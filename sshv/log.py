@@ -7,7 +7,7 @@ import getpass
 import time
 from random import shuffle
 import sys
-import ssh.utils as utils
+from sshv import utils as utils
 
 LOG_PATH = f'{sys.path[0]}/'
 CLI_LOG_NAME = f'test_{time.strftime("%Y%m%d_%H%M%S", time.localtime())}.log'
@@ -121,13 +121,14 @@ class Log(object):
         #     self.user = get_username()
         # if not self.tid:
         #     self.tid = create_transaction_id()
-        logger.debug(
-            "",
-            extra={
-                'times': utils.get_times(),
-                'node': utils.get_global_dict_value(conn),
-                't1': t1,
-                't2': t2,
-                'd1': d1,
-                'd2': d2,
-                'data': data})
+        if False:
+            logger.debug(
+                "",
+                extra={
+                    'times': utils.get_times(),
+                    'node': utils.get_global_dict_value(conn),
+                    't1': t1,
+                    't2': t2,
+                    'd1': d1,
+                    'd2': d2,
+                    'data': data})

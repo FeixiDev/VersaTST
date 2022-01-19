@@ -1,5 +1,5 @@
 import sys
-import ssh.utils as utils
+from sshv import utils as utils
 import storage.action as action
 import gevent
 import threading
@@ -32,29 +32,34 @@ def stop_thread(thread):
 
 def check_crm_node_status(result, config, have_down):
 
-
+    err = False
     if result:
         host_list = config.get_hostname()
         re_online = "Online:(.*?)]"
         online_result = utils.re_findall(re_online, result)
         if not online_result:
-            utils.prt_log('', f"CRM Online status error ", 2)
+            utils.prt_log('', f"CRM Online status error ", 1)
+            err = True
         re_offline = "OFFLINE:(.*?)]"
         offline_result = utils.re_findall(re_offline, result)
 
         if have_down:
             shutdown_node = config.get_down_node()["hostname"]
             if not offline_result:
-                utils.prt_log('', f"CRM OFFLINE status error ", 2)          
-            if not shutdown_node in offline_result[0]:
-                utils.prt_log('', f"CRM {shutdown_node} OFFLINE status error ", 2)
+                utils.prt_log('', f"CRM OFFLINE status error ", 1)
+                err = True
+            if not err:          
+                if not shutdown_node in offline_result[0]:
+                    utils.prt_log('', f"CRM {shutdown_node} OFFLINE status error ", 1)
+                    err = True
             host_list = config.get_up_hostname()
 
         for host in host_list:
             if not host in online_result[0]:
-                utils.prt_log('', f"CRM {host} Online status error ", 2)
+                utils.prt_log('', f"CRM {host} Online status error ", 1)
+                err = True
                 
-        return True
+        return err
 
 
 def get_crm_status_by_type(result, resource, type):
@@ -161,226 +166,6 @@ class TELConn(object):
         MODE_INF = self.tel.read_until(b'ddfffffd',timeout = 3)
         print(MODE_INF)
 
-class QuorumAutoTest(object):
-    def __init__(self, config):
-        self.config = config
-        self.conn = Connect(self.config)
-        self.vplx_configs = self.config.get_vplx_configs()
-        self.node_list = [vplx_config["hostname"] for vplx_config in self.vplx_configs]
-        self.skip = False
-
-
-    def get_sp(self):
-        sp = "sp_quorum"
-        sp_list = []
-        for vplx_config in self.vplx_configs:
-            if "sp" in vplx_config.keys():
-                sp_list.append(vplx_config["sp"])
-        if len(sp_list) == 3 and len(set(sp_list)) == 1:
-            self.skip = True
-            sp = sp_list[0]
-        return sp
-
-    def test_drbd_quorum(self):
-        if len(self.conn.list_vplx_ssh) != 3:
-            utils.prt_log('', f"Please make sure there are three nodes for this test", 2)
-        sp = self.get_sp()
-        resource = "res_quorum"
-        test_times = self.config.get_test_times()
-        use_case = self.config.get_use_case()
-
-        vtel_conn = None
-        if None not in self.conn.list_vplx_ssh:
-            vtel_conn = self.conn.list_vplx_ssh[0]
-        self.clean_dmesg()
-        # utils.prt_log(None, f"Start to install software ...", 0)
-        # self.install_software()
-        install_obj = action.InstallSoftware(vtel_conn)
-        install_obj.update_pip()
-        install_obj.install_vplx()
-
-        self.create_linstor_resource(vtel_conn, sp, resource)
-
-        stor_obj = action.Stor(vtel_conn)
-
-        if not stor_obj.check_drbd_quorum(resource):
-            utils.prt_log(vtel_conn, f'Abnormal quorum status of {resource}', 1)
-            self.get_log()
-            self.delete_linstor_resource(vtel_conn, sp, resource)
-            return
-        if not self.cycle_ckeck_drbd_status(resource):
-            self.get_log()
-            self.delete_linstor_resource(vtel_conn, sp, resource)
-            return
-        device_name = stor_obj.get_device_name(resource)
-        device_list = [vplx_config["private_ip"]["device"] for vplx_config in self.vplx_configs]
-        if use_case == 1:
-            test_conn_list = zip(self.conn.list_vplx_ssh, self.conn.list_vplx_ssh[1:] + self.conn.list_vplx_ssh[:1])
-        if use_case == 2:
-            test_conn_list = [(self.conn.list_vplx_ssh[0], self.conn.list_vplx_ssh[1]),
-                              (self.conn.list_vplx_ssh[2], self.conn.list_vplx_ssh[1])]
-            device_list.pop(1)
-        mode_times = 0
-        for conn_list in test_conn_list:
-            device = device_list.pop(0)
-            node_a = utils.get_global_dict_value(conn_list[0])
-            node_b = utils.get_global_dict_value(conn_list[1])
-            utils.prt_log('', f"\nMode:({node_a}, {node_b})", 0)
-            for i in range(test_times):
-                times = utils.get_times() + 1
-                utils.set_times(times)
-                utils.prt_log('', f"\nMode test times: {i + 1}. Total test times: {times}.", 0)
-                stor_a = action.Stor(conn_list[0])
-                stor_b = action.Stor(conn_list[1])
-                ip_a = action.IpService(conn_list[0])
-                dd_a = action.RWData(conn_list[0])
-                dd_b = action.RWData(conn_list[1])
-                stor_a.primary_drbd(resource)
-                utils.prt_log(conn_list[0], f"Primary resource on {node_a} ...", 0)
-                time.sleep(3)
-
-                thread1 = threading.Thread(target=dd_a.dd_operation,
-                                           args=(device_name,), name="thread1")
-                thread2 = threading.Thread(target=ip_a.down_device, args=(device,), name="thread2")
-                thread3 = threading.Thread(target=dd_b.dd_operation,
-                                           args=(device_name,), name="thread3")
-                thread4 = threading.Thread(target=stor_a.secondary_drbd, args=(resource,), name="thread4")
-                thread1.start()
-                time.sleep(20)
-                thread2.start()
-                utils.prt_log(conn_list[0], f"Down {device} on {node_a}  ...", 0)
-                thread2.join()
-                time.sleep(3)
-                stor_b.primary_drbd(resource)
-                utils.prt_log(conn_list[0], f"Primary resource on {node_b} ...", 0)
-                time.sleep(3)
-                thread3.start()
-                time.sleep(10)
-                thread4.start()
-                utils.prt_log(conn_list[0], f"Secondary resource on {node_a} ...", 0)
-                thread4.join()
-                thread1.join()
-                time.sleep(10)
-                dd_b.kill_dd(device_name)
-                time.sleep(5)
-                if thread3.is_alive():
-                    stop_thread(thread3)
-                    time.sleep(5)
-                else:
-                    utils.prt_log(conn_list[1], f"dd operation had been finished", 1)
-                thread3.join()
-                ip_a.up_device(device)
-                utils.prt_log(conn_list[0], f"Up {device} on {node_a}  ...", 0)
-                ip_a.netplan_apply()
-                time.sleep(5)
-                if not self.cycle_ckeck_drbd_status(resource):
-                    self.get_log()
-                    stor_b.secondary_drbd(resource)
-                    self.delete_linstor_resource(vtel_conn, sp, resource)
-                    return
-                stor_b.secondary_drbd(resource)
-                utils.prt_log(conn_list[0], f"Secondary resource on {node_b} ...", 0)
-                if times == mode_times * test_times + 1:
-                    self.get_log()
-                    mode_times = mode_times + 1
-                time.sleep(180)
-
-        self.delete_linstor_resource(vtel_conn, sp, resource)
-
-    def create_linstor_resource(self, conn, sp, resource):
-        size = self.config.get_resource_size()
-        use_case = self.config.get_use_case()
-
-        stor_obj = action.Stor(conn)
-        if not self.skip:
-            utils.prt_log(conn, f"Start to create node ...", 0)
-            for vplx_config in self.vplx_configs:
-                stor_obj.create_node(vplx_config["hostname"], vplx_config["private_ip"]["ip"])
-            utils.prt_log(conn, f"Start to create storagepool {sp} ...", 0)
-            for vplx_config in self.vplx_configs:
-                stor_obj.create_sp(vplx_config["hostname"], sp, vplx_config["lvm_device"])
-        diskful_node_list = self.node_list[:]
-        utils.prt_log(conn, f"Start to create resource {resource} ...", 0)
-        if use_case == 1:
-            diskless_node = diskful_node_list.pop()
-            stor_obj.create_diskful_resource(diskful_node_list, sp, size, resource)
-            stor_obj.create_diskless_resource(diskless_node, resource)
-        if use_case == 2:
-            stor_obj.create_diskful_resource(diskful_node_list, sp, size, resource)
-        time.sleep(15)
-
-    def delete_linstor_resource(self, conn, sp, resource):
-        stor_obj = action.Stor(conn)
-        utils.prt_log(conn, f"Start to delete resource {resource} ...", 0)
-        stor_obj.delete_resource(resource)
-        time.sleep(3)
-        if not self.skip:
-            utils.prt_log(conn, f"Start to delete storagepool {sp} ...", 0)
-            for node in self.node_list:
-                stor_obj.delete_sp(node, sp)
-            time.sleep(3)
-            utils.prt_log(conn, f"Start to delete node ...", 0)
-            for node in self.node_list:
-                stor_obj.delete_node(node)
-
-    def get_log(self):
-        tmp_path = "/tmp/dmesg"
-        lst_get_log = []
-        lst_mkdir = []
-        lst_download = []
-        lst_del_log = []
-        log_path = self.config.get_log_path()
-        utils.prt_log('', f"Start to collect dmesg file ...", 0)
-        for conn in self.conn.list_vplx_ssh:
-            debug_log = action.DebugLog(conn)
-            lst_mkdir.append(gevent.spawn(debug_log.mkdir_log_dir, tmp_path))
-            lst_get_log.append(gevent.spawn(debug_log.get_dmesg_file, tmp_path))
-            lst_download.append(gevent.spawn(debug_log.download_log, tmp_path, log_path))
-            lst_del_log.append(gevent.spawn(debug_log.rm_log_dir, tmp_path))
-        gevent.joinall(lst_get_log)
-        gevent.joinall(lst_mkdir)
-        gevent.joinall(lst_download)
-        gevent.joinall(lst_mkdir)
-        utils.prt_log('', f"Finished to collect dmesg file ...", 0)
-
-    def clean_dmesg(self):
-        lst_clean_dmesg = []
-        for conn in self.conn.list_vplx_ssh:
-            debug_log = action.DebugLog(conn)
-            lst_clean_dmesg.append(gevent.spawn(debug_log.clear_dmesg))
-        gevent.joinall(lst_clean_dmesg)
-
-    def ckeck_drbd_status(self, resource):
-        resource_status_list = []
-        for vplx_conn in self.conn.list_vplx_ssh:
-            stor_obj = action.Stor(vplx_conn)
-            resource_status_result = stor_obj.get_drbd_status(resource)
-            resource_status = ckeck_drbd_status_error(resource_status_result, resource)
-            resource_status_list.append(resource_status)
-        return resource_status_list
-
-    def cycle_ckeck_drbd_status(self, resource):
-        flag = False
-        for i in range(100):
-            flag = True
-            resource_status_list = self.ckeck_drbd_status(resource)
-            for resource_status in resource_status_list:
-                if resource_status == 'StandAlone':
-                    utils.prt_log('',
-                                  f'{time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())} --- Connection is StandAlone',
-                                  0)
-                    return False
-                if resource_status[1] != "UpToDate" and resource_status[1] != "Diskless":
-                    status = resource_status[1]
-                    time.sleep(180)
-                    flag = False
-            if flag is True:
-                break
-        if flag is False:
-            utils.prt_log('', f'{time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())} --- Resource status: {status}',
-                          0)
-        return flag
-
 
 class IscsiTest(object):
     def __init__(self, config):
@@ -389,6 +174,8 @@ class IscsiTest(object):
         self.vplx_configs = self.config.get_vplx_configs()
         self.node_list = [vplx_config["hostname"] for vplx_config in self.vplx_configs]
         self.lun_list = []
+        self.clean_dmesg()
+        self.crm_start_time = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())
 
     def test_drbd_in_used(self):
         start_time = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())
@@ -437,15 +224,16 @@ class IscsiTest(object):
     def check_drbd_crm_res(self, resource, have_down):
         flag = True
         tips = ''
+        err = False
         conn = self.conn.list_normal_vplx_ssh[0]
         iscsi_obj = action.Iscsi(conn)
         crm_status = iscsi_obj.get_crm_status()
-        check_crm_node_status(crm_status, self.config, have_down)
+        err = check_crm_node_status(crm_status, self.config, have_down)
 
         error_message = get_crm_status_by_type(crm_status, None, "FailedActions")
         if error_message:
-            print(error_message)
-            return False
+            utils.prt_log('', error_message, 1)
+            err = True
 
         all_resource_status = get_crm_status_by_type(crm_status, None, "AllLUN")
         if all_resource_status:
@@ -455,14 +243,13 @@ class IscsiTest(object):
 
                 if status[1] != 'Started':
                     utils.prt_log(conn, f"{tips}{status[0]} status is {status[1]}", 1)
-                    flag = False
-            if not flag:
-                return False
+                    err = True
         else:
             utils.prt_log(conn, f"Can't get crm status", 1)
-            return False
-        return True
-
+            err = True
+        if err:
+            self.get_log(have_down)
+        return err
 
 
     def check_target_lun_status(self, target, resource, conn):
@@ -509,26 +296,33 @@ class IscsiTest(object):
             if utils.get_global_dict_value(ssh) == down_ip:
                 ssh.down_self()
 
-    def down_node_interface(self):
+    def change_node_interface(self,on):
         interface_ip = self.config.get_interface_inf()["ip"]
+        interface = self.config.get_interface_inf()["interface"]
         for ssh in self.conn.list_vplx_ssh:
             if utils.get_global_dict_value(ssh) == interface_ip:
-                ssh.down_interface()
+                if on:
+                    ssh.up_interface(interface)
+                else:
+                    ssh.down_interface(interface)
 
-    def down_switch_port(self):
-        self.clean_dmesg()
-        start_time = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime())
-        time.sleep(20)
+
+
+    def change_switch_port(self,on):
         ip = self.config.get_switch_port()["ip"]
         port = self.config.get_switch_port()["port"]
         switch = TELConn(ip)
-        switch.nodown_port1(port)
-        self.get_log(start_time)
+        if on:
+            switch.nodown_port1(port)
+        else:
+            switch.nodown_port1(port)
 
     def ckeck_drbd_status_spof(self, resource, have_down):
+        err = False
         if not have_down:
-            err = ckeck_drbd_status(resource)
+            result = self.ckeck_drbd_status(resource)
         else:
+            result = True
             flag = 0
             stor_obj = action.Stor(self.conn.list_normal_vplx_ssh[0])
             if self.lun_list:
@@ -543,26 +337,34 @@ class IscsiTest(object):
                 if status[2] != "UpToDate" and status[2] != "Diskless":
                     flag = flag + 1
             if flag != 2:
-                utils.prt_log(self.conn.list_normal_vplx_ssh[0], f"When down node, resource status is not correct", 2)
-            return True
+                utils.prt_log(self.conn.list_normal_vplx_ssh[0], f"When down node, resource status is not correct", 1)
+                result = False
+        if not result:
+            err = True
+            self.get_log(have_down)
+        return err
 
 
     def ckeck_drbd_status(self, resource):
         flag = True
-        stor_obj = action.Stor(self.conn.list_vplx_ssh[0])
+        stor_obj = action.Stor(self.conn.list_normal_vplx_ssh[0])
         if self.lun_list:
             all_lun_string = " ".join(self.lun_list)
         else:
             all_lun_string = resource
         resource_status_result = stor_obj.get_linstor_res(all_lun_string)
         resource_status = check_drbd_conns_status(resource_status_result)
-        for status in resource_status:
-            if status[1] != "Ok":
-                utils.prt_log(self.conn.list_vplx_ssh[0], f"Resource {status[0]} connection is {status[1]}", 1)
-                flag = False
-            if status[2] != "UpToDate" and status[2] != "Diskless":
-                utils.prt_log(self.conn.list_vplx_ssh[0], f"Resource {status[0]} status is {status[2]}", 1)
-                flag = False
+        if resource_status:
+            for status in resource_status:
+                if status[1] != "Ok":
+                    utils.prt_log(self.conn.list_normal_vplx_ssh[0], f"Resource {status[0]} connection is {status[1]}", 1)
+                    flag = False
+                if status[2] != "UpToDate" and status[2] != "Diskless":
+                    utils.prt_log(self.conn.list_normal_vplx_ssh[0], f"Resource {status[0]} status is {status[2]}", 1)
+                    flag = False
+        else:
+            utils.prt_log('',f"Get {resource} status failed ",1)
+            flag = False
         return flag
 
     def restore_resource(self, resource):
@@ -584,7 +386,7 @@ class IscsiTest(object):
             utils.prt_log(conn, f"Can't get status of resource {resource}", 1)
         iscsi_obj.unmove_res(resource)
 
-    def get_log(self, time, node_down = False):
+    def get_log(self, node_down):
         tmp_path = "/tmp/dmesg"
         crm_tmp_path = "/tmp/crm_report"
         lst_get_log = []
@@ -598,7 +400,7 @@ class IscsiTest(object):
         crm_log_path = self.config.get_log_path()
         debug_log = action.DebugLog(self.conn.list_normal_vplx_ssh[0])
         utils.prt_log(self.conn.list_normal_vplx_ssh[0], f"Start to collect crm_report...", 0)
-        debug_log.get_crm_report_file(time, crm_tmp_path)
+        debug_log.get_crm_report_file(self.crm_start_time, crm_tmp_path)
         debug_log.download_log(crm_tmp_path, crm_log_path)
         debug_log.rm_log_dir(crm_tmp_path)
 
