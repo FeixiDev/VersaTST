@@ -1,0 +1,13 @@
+#Video scenario read/write test
+
+run_count: 3
+run_time: 10
+test_device_info: [/dev/sdb,/dev/sdc] 
+size: 70%
+
+unique_ID: 30003
+write_to_excel: True
+line_chart: True
+histogram: True
+
+        
