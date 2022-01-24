@@ -17,8 +17,9 @@ import kraken.performance_scenarios.Performance_scenarios as scenarios
 
 
 
-def run(scenarios_list, config):
+def run(scenarios_list, config,signal=False):
     #check_log_dir = scenarios.Check_log_dir()
+    signal_run = signal
     utils._init()
     logger = log.Log()
     utils.set_logger(logger)
@@ -27,7 +28,7 @@ def run(scenarios_list, config):
         if 'P_sql_config' in str(scenarios_list[i]):
             perforamce_manual()
         else:
-            scenarios.Run_test(scenarios_list[i][0])
+            scenarios.Run_test(scenarios_list[i][0],signal=signal_run)
 
 
 

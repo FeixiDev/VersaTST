@@ -437,8 +437,9 @@ class Run_selected_function(object):
 
 
 class Run_test(object):
-    def __init__(self,config_yml):
+    def __init__(self,config_yml,signal=False):
         self.config_yml = config_yml
+        self.signal = signal
         #Check_file_dir()
         Draw_config = gc.Get_draw_info(self.config_yml)
         self.count = Draw_config.count_info()
@@ -454,7 +455,15 @@ class Run_test(object):
             print_info = basic_fun.sql_print_index()
             if 'self_defined' in self.config_yml:
                 utils.prt_log('', f"run self defined test", 0)
-                Self_defined_case(self.config_yml)
+                if self.signal == True:
+                    get_down_info = utils.ConfFile('./scenarios/P_nic_info.yml')
+                    hostname,port,ip,password,interface= get_down_info.get_P_interface_info()
+                    action = utils.SSHConn(host=ip,password=password)
+                    action.down_interface(interface)
+                    Self_defined_case(self.config_yml)
+                    action.up_interface(interface)
+                else:
+                    Self_defined_case(self.config_yml)
                 utils.prt_log('', f"run self defined test , Done", 0)
                 subprocess.run('mv *.txt ./kraken/performance_scenarios/performance_data',shell=True)
                 command = 'mv ./kraken/performance_scenarios/performance_data/requirements.txt ' + str(sys.path[0])
@@ -464,7 +473,15 @@ class Run_test(object):
 
             elif 'seq_rw' in self.config_yml:
                 utils.prt_log('', f"run seq rw test", 0)
-                Seq_rw_case(self.config_yml)
+                if self.signal == True:
+                    get_down_info = utils.ConfFile('./scenarios/P_nic_info.yml')
+                    hostname,port,ip,password,interface= get_down_info.get_P_interface_info()
+                    action = utils.SSHConn(host=ip,password=password)
+                    action.down_interface(interface)
+                    Seq_rw_case(self.config_yml)
+                    action.up_interface(interface)
+                else:
+                    Seq_rw_case(self.config_yml)
                 utils.prt_log('', f"run seq rw test , Done", 0)
                 subprocess.run('mv *.txt ./kraken/performance_scenarios/performance_data',shell=True)
                 command = 'mv ./kraken/performance_scenarios/performance_data/requirements.txt ' + str(sys.path[0])
@@ -474,7 +491,15 @@ class Run_test(object):
 
             elif 'video_scenario' in self.config_yml:
                 utils.prt_log('', f"run Video scenarios test", 0)
-                Video_scenarios_case(self.config_yml)
+                if self.signal == True:
+                    get_down_info = utils.ConfFile('./scenarios/P_nic_info.yml')
+                    hostname,port,ip,password,interface= get_down_info.get_P_interface_info()
+                    action = utils.SSHConn(host=ip,password=password)
+                    action.down_interface(interface)
+                    Video_scenarios_case(self.config_yml)
+                    action.up_interface(interface)
+                else:
+                    Video_scenarios_case(self.config_yml)
                 utils.prt_log('', f"run Video scenarios test , Done", 0)
                 subprocess.run('mv *.txt ./kraken/performance_scenarios/performance_data',shell=True)
                 command = 'mv ./kraken/performance_scenarios/performance_data/requirements.txt ' + str(sys.path[0])
@@ -484,7 +509,15 @@ class Run_test(object):
 
             elif 'random_rw' in self.config_yml:
                 utils.prt_log('', f"run random rw scenarios test", 0)
-                Random_rw_scenarios_case(self.config_yml)
+                if self.signal == True:
+                    get_down_info = utils.ConfFile('./scenarios/P_nic_info.yml')
+                    hostname,port,ip,password,interface= get_down_info.get_P_interface_info()
+                    action = utils.SSHConn(host=ip,password=password)
+                    action.down_interface(interface)
+                    Random_rw_scenarios_case(self.config_yml)
+                    action.up_interface(interface)
+                else:
+                    Random_rw_scenarios_case(self.config_yml)
                 utils.prt_log('', f"run random rw scenarios test , Done", 0)
                 subprocess.run('mv *.txt ./kraken/performance_scenarios/performance_data',shell=True)
                 command = 'mv ./kraken/performance_scenarios/performance_data/requirements.txt ' + str(sys.path[0])

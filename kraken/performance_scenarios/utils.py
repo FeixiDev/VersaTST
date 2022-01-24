@@ -280,6 +280,24 @@ class SSHConn(object):
                 data = data.decode() if isinstance(data, bytes) else data
                 return {"st": True, "rt": data}
 
+    def down_interface(self, device):
+        cmd = f"ifconfig {device} down"
+        result = self.exec_cmd(cmd)
+        if result["st"]:
+            str_info = 'Shutdowned interface:' + str(device)
+            prt_log('',str_info,0)
+            return True
+
+    def up_interface(self, device):
+        cmd = f"ifconfig {device} up"
+        result = self.exec_cmd(cmd)
+        if result["st"]:
+            str_info = 'Opened interface:' + str(device)
+            prt_log('',str_info,0)
+
+            
+            return True
+
     def sftp_upload(self, local, remote):
         sf = paramiko.Transport((self._host, self._port))
         sf.connect(username=self._username, password=self._password)
@@ -448,3 +466,15 @@ class ConfFile(object):
     @deco_yaml_dict
     def get_device(self):
         return self.config["device"]
+
+    @deco_yaml_dict
+    def get_P_interface_info(self):
+        scenario_config = self.config["down_up_nic_scenario"]
+        down_interface_host = scenario_config["down_up_interface_host"]
+        hostname = down_interface_host["hostname"]
+        port = down_interface_host["port"]
+        ip = down_interface_host["public_ip"]
+        password = down_interface_host["password"]
+        interf = down_interface_host["interface"]
+        return hostname,port,ip,password,interf
+

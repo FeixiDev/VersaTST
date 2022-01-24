@@ -276,11 +276,17 @@ def main(cfg):
             )
         else:
             chaos_scenarios = config["kraken"].get("chaos_scenarios", [])
-            for scenario in chaos_scenarios:
-                scenario_type = list(scenario.keys())[0]
-                scenarios_list = scenario[scenario_type]
+            for scenario in range(len(chaos_scenarios)):
+                scenario_type = list(chaos_scenarios[scenario].keys())[0]
+                scenarios_list = list(chaos_scenarios[scenario].values())[0]
+                if scenario_type == "down_nic_scenarios":
+                    signal = True
+                    scenarios_list = list(chaos_scenarios[1].values())[0]
+                    per_scenarios.run(scenarios_list,config,signal=signal)
+                    sys.exit(1)
+
                 if scenario_type == "performance_scenarios":
-                    per_scenarios.run(scenarios_list, config)
+                    per_scenarios.run(scenarios_list,config)
     else:
         logging.error("Cannot find a config at %s, please check" % (cfg))
         sys.exit(1)
