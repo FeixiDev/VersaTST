@@ -269,6 +269,7 @@ def main(cfg):
                 logging.error("Post scenarios are still failing at the end of all iterations")
                 sys.exit(1)
 
+
             run_dir = os.getcwd() + "/kraken.report"
             logging.info(
                 "Successfully finished running Kraken. UUID for the run: %s. Report generated at %s. Exiting"

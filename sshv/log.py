@@ -7,7 +7,7 @@ import getpass
 import time
 from random import shuffle
 import sys
-from sshv import utils as utils
+from sshv import utils
 
 LOG_PATH = f'{sys.path[0]}/'
 CLI_LOG_NAME = f'test_{time.strftime("%Y%m%d_%H%M%S", time.localtime())}.log'
