@@ -270,6 +270,8 @@ def main(cfg):
             "Successfully finished running Kraken. UUID for the run: %s. Report generated at %s. Exiting"
             % (run_uuid, run_dir)
         )
+
+
     else:
         logging.error("Cannot find a config at %s, please check" % (cfg))
         sys.exit(1)

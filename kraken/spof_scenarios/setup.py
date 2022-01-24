@@ -4,6 +4,7 @@ import re
 import json
 import logging
 import threading
+import queue
 import time
 from os import path
 import kraken.cerberus.setup as cerberus
@@ -23,7 +24,7 @@ def run(scenarios_list, config):
 	lins_blkpvc_file = scenarios_list[0][0]
 	gomet_pod_file = scenarios_list[1][0]
 	stor_file = scenarios_list[2][0]
-	write_wait = threading.Event()
+	write_q = queue.Queue(maxsize = 1)
 	utils._init()
 	logger = log.Log()
 	utils.set_logger(logger)
@@ -44,18 +45,18 @@ def run(scenarios_list, config):
 
 	versa_con = control.IscsiTest(stor_config)
 
-	err = versa_con.ckeck_drbd_status_spof(pvc_resoure, False)
-	if not err:	
-		err = versa_con.check_drbd_crm_res(pvc_resoure, False)
-	if err:
-		clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)
-		exit(1)	
+	# err = versa_con.ckeck_drbd_status_spof(pvc_resoure, False)
+	# if not err:	
+	# 	err = versa_con.check_drbd_crm_res(pvc_resoure, False)
+	# if err:
+	# 	clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)
+	# 	exit(1)	
 
 	left_times = times
 	while(left_times):
 		down = False	
-		logging.info("Times %d: Go-meter start to write", times - left_times)
-		threading.Thread(target=gometer_write, args=(go_meter_pod, write_wait)).start()
+		logging.info("Times %d: For single failure, Go-meter start to write", times - left_times)
+		threading.Thread(target=gometer_write, args=(go_meter_pod, write_q)).start()
 		if kind == "node_down":
 			versa_con.down_node()
 			down = True
@@ -67,27 +68,67 @@ def run(scenarios_list, config):
 			logging.info("Please do hand operation...")
 
 		logging.info("Go-meter is writing, wait...")
-		write_wait.wait()
-		write_wait.clear()
-
-		err = versa_con.ckeck_drbd_status_spof(pvc_resoure, down)
-		if not err:	
-			err = versa_con.check_drbd_crm_res(pvc_resoure, down)
+		err = write_q.get()
 		if err:
-			clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)		
-			exit(1)
+			utils.prt_log('', f"Go meter write failed",1)
+			versa_con.get_log(down)
+			clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)
+			exit(1)			
+
+		# err = versa_con.ckeck_drbd_status_spof(pvc_resoure, down)
+		# if not err:	
+		# 	err = versa_con.check_drbd_crm_res(pvc_resoure, down)
+		# if err:
+		# 	clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)		
+		# 	exit(1)
 
 		logging.info("Go-meter start to compare")
 		command = "cd /go/src/app;./main compare"
 		response = kubecli.exec_cmd_in_pod(command, go_meter_pod, namespace)
 		logging.info("\n" + str(response))
 
+		if not "Finish" in response:
+			utils.prt_log('', f"Go meter compare failed",1)
+			if kind == "interface_down":
+				versa_con.change_node_interface(True)
+			elif kind == "switch_port_down":
+				versa_con.change_switch_port(True)
+			versa_con.get_log(down)
+			clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)
+			exit(1)
+
+		logging.info("Times %d:For fix single failure, Go-meter start to write", times - left_times)
+		threading.Thread(target=gometer_write, args=(go_meter_pod, write_q)).start()
+
 		if kind == "interface_down":
 			versa_con.change_node_interface(True)
 		elif kind == "switch_port_down":
 			versa_con.change_switch_port(True)
+		elif kind == "hand_operation":
+			logging.info("Please do hand operation...")
 
-		time.sleep(10)
+		down = False
+		logging.info("Go-meter is writing, wait...")
+		err = write_q.get()
+		if err:
+			utils.prt_log('', f"Go meter write failed",1)
+			versa_con.get_log(down)
+			clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)
+			exit(1)		
+
+
+		# err = versa_con.ckeck_drbd_status_spof(pvc_resoure, down)
+		# if not err:	
+		# 	err = versa_con.check_drbd_crm_res(pvc_resoure, down)
+		# if err:
+		# 	clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)		
+		# 	exit(1)
+
+		logging.info("Go-meter start to compare")
+		command = "cd /go/src/app;./main compare"
+		response = kubecli.exec_cmd_in_pod(command, go_meter_pod, namespace)
+		logging.info("\n" + str(response))
+
 		if not "Finish" in response:
 			utils.prt_log('', f"Go meter compare failed",1)
 			versa_con.get_log(down)
@@ -138,12 +179,16 @@ def rund(scenarios_list, config):
 	kubecli.delete_pvc(lins_blkpvc_file)
 
 
-def gometer_write(pod_name,write_wait):
+def gometer_write(pod_name, write_q):
 
 	command = "cd /go/src/app;./main write"
 	response = kubecli.exec_cmd_in_pod(command, pod_name, "kraken")
 	logging.info("\n" + str(response))
-	write_wait.set()
+	if "Finish" in response:
+		write_q.put(0)
+	else:
+		write_q.put(1)
+
 
 
 
