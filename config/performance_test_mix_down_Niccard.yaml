@@ -1,0 +1,20 @@
+#performance test config yaml file 
+kraken:
+    signal_state: RUN                                                            
+    VersaTest_version: v1.0.0                               
+    distribution: performance                                # Required,performance test distribution
+    chaos_scenarios: 
+
+        -   down_nic_scenarios:
+                - -    scenarios/P_nic_info.yml
+                               
+        -   performance_scenarios:
+                - -    scenarios/P_self_defined_scenario.yml
+                - -    scenarios/P_seq_rw_scenario.yml
+                - -    scenarios/P_random_rw_scenario.yml
+                - -    scenarios/P_video_scenario.yml
+                #- -    scenarios/P_sql_config.yml 
+
+        -   up_nic_scenarios:
+                - -    scenarios/P_nic_info.yml
+

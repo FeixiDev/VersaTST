@@ -1,0 +1,26 @@
+#self_defined_config yaml file
+PerformanceGlobal:
+  ioengine=libaio 
+  direct=1 
+  ramp_time=10
+  runtime=10
+  size=70%
+  group_reporting
+  new_group
+
+#if test directory,please input size=size_capacity on PerformanceGlobal
+PerformanceSetting: 
+  filename: [/dev/sdb,/dev/sdc]
+  #bs: [1k,2k,4k,8k]
+  bs: [1k,2k,4k,8k,16k,32k,64k,128k,256k,512k,1M,2M]
+  #rw: [read]
+  rw: [read,write,randread,randwrite]
+  iodepth: ['8']
+  numjobs: ['8']
+
+run_count: 1
+unique_ID: 10001
+write_to_excel: True
+line_chart: True
+histogram: True
+        
