@@ -25,6 +25,79 @@ def initialize_clients(kubeconfig_path):
         sys.exit(1)
 
 
+def create_namespace(namespace):
+    body = {"kind":"Namespace","metadata":{"name":namespace}}
+    try:
+        cli.create_namespace(body)
+    except Exception as e :
+        logging.error("Namespace creation failed %s" % e)
+        sys.exit(1)
+
+
+def delete_namespace(namespace):
+    try:
+        cli.delete_namespace(namespace)
+        while cli.read_namespace_status(namespace):
+            time.sleep(1)
+    except ApiException:
+        logging.info(f"Namespace:{namespace} alreay deleted")
+
+
+def list_pvc(label_selector=None,namespace=None):
+    pvc_list = []
+    try:
+        if label_selector:
+            ret = cli.list_persistent_volume_claim_for_all_namespaces(pretty=True, label_selector=label_selector)
+        else:
+            ret = cli.list_persistent_volume_claim_for_all_namespaces(pretty=True)
+    except ApiException as e:
+        logging.error("Exception when calling CoreV1Api->list_persistent_volume_claim_for_all_namespaces: %s\n" % e)
+    for pvc in ret.items:
+        if pvc.metadata.namespace == namespace:
+            pvc_list.append(pvc.metadata.name)
+    return pvc_list
+
+def list_pv(label_selector=None,namespace=None):
+    pv_list = []
+    try:
+        if label_selector:
+            ret = cli.list_persistent_volume_claim_for_all_namespaces(pretty=True, label_selector=label_selector)
+        else:
+            ret = cli.list_persistent_volume_claim_for_all_namespaces(pretty=True)
+    except ApiException as e:
+        logging.error("Exception when calling CoreV1Api->list_persistent_volume_claim_for_all_namespaces: %s\n" % e)
+    for pvc in ret.items:
+        if pvc.metadata.namespace == namespace:
+            pv_list.append(pvc.spec.volume_name)
+    return pv_list
+
+def get_pvc_status(name, namespace):
+    pvc_status = {}
+    try:
+        ret = cli.read_namespaced_persistent_volume_claim_status(name,namespace)
+    except ApiException as e:
+        logging.error("Exception when calling CoreV1Api->read_namespaced_persistent_volume_claim_status: %s\n" % e)
+    return ret.status.phase
+
+def get_all_pvc_status(namespace):
+    status = {}
+    try:
+        ret = cli.list_persistent_volume_claim_for_all_namespaces(pretty=True)
+    except ApiException as e:
+        logging.error("Exception when calling CoreV1Api->list_persistent_volume_claim_for_all_namespaces: %s\n" % e)
+
+    for pvc in ret.items:
+        if pvc.metadata.namespace == namespace:
+            status.update({pvc.metadata.name:pvc.status.phase})
+    return status
+    
+    
+
+def get_storageclass():
+    cli.get_st
+
+
+
 def create_pvc(pvcfile):
     with open(path.join(path.dirname(__file__), pvcfile)) as f:
         pvc = yaml.safe_load(f)
@@ -33,8 +106,17 @@ def create_pvc(pvcfile):
 
         return "pvc-"+resp.metadata.uid
 
+def create_pvc_(body,namespace):
+    try:
+        resp = cli.create_namespaced_persistent_volume_claim(body=body,namespace=namespace)
+        # logging.info("PVC created. name='%s'" % resp.metadata.name)
+        return "pvc-"+resp.metadata.uid
+    except Exception as e:
+        logging.error("PVC creation failed %s" % e)
+        sys.exit(1)
 
-def create_dep(depfile):
+
+def create_dep(depfile):    
     with open(path.join(path.dirname(__file__), depfile)) as f:
         dep = yaml.safe_load(f)
         resp = cli_dep.create_namespaced_deployment(body=dep,namespace="kraken")
@@ -50,10 +132,25 @@ def delete_pvc(pvcfile):
         resp = cli.delete_namespaced_persistent_volume_claim(name=pvc_name,namespace="kraken")
         logging.info("Pvc delete. status='%s'" % resp.metadata.name)
 
+def delete_pvc_(name,namespace):
+    try:
+        cli.delete_namespaced_persistent_volume_claim(name, namespace)
+        while cli.read_namespaced_persistent_volume_claim(name, namespace):
+            time.sleep(1)
+    except ApiException:
+        logging.info(f"PVC:{name} alreay deleted")
+
+def delete_all_pvc(namespace):
+    try:
+        cli.delete_collection_namespaced_persistent_volume_claim(namespace)
+    except ApiException as e:
+        logging.info(f"PVC alreay deleted")
+
+
 def delete_dep(depfile):
     #with open(pvcfile, "r") as f:
     with open(path.join(path.dirname(__file__), depfile)) as f:
-        config_yaml = yaml.full_load(f)
+        config_yaml = yaml.full_load(f) 
         scenario_config = config_yaml["metadata"]
         dep_name = scenario_config.get("name", "")
         resp = cli_dep.delete_namespaced_deployment(name=dep_name,namespace="kraken")

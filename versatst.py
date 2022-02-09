@@ -22,7 +22,10 @@ import kraken.zone_outage.actions as zone_outages
 import kraken.application_outage.actions as application_outage
 import kraken.spof_scenarios.setup as spof_scenarios
 import kraken.pvc_demo.setup as pvc_demo
+import kraken.pvc_scenarios.setup as pvc_scenarios
 import server as server
+
+import linstorclient.client as linstorcli
 
 
 def publish_kraken_status(status):
@@ -76,6 +79,7 @@ def main(cfg):
         logging.info("Initializing client to talk to the Kubernetes cluster")
         os.environ["KUBECONFIG"] = str(kubeconfig_path)
         kubecli.initialize_clients(kubeconfig_path)
+        # linstorcli.initialize_clients()
 
         # find node kraken might be running on
         kubecli.find_kraken_node()
@@ -213,11 +217,16 @@ def main(cfg):
                             logging.info("Injecting application outage")
                             application_outage.run(scenarios_list, config, wait_duration)
 
-                        # PVC scenarios
+                        # PVC scenarios 
                         elif scenario_type == "pvc_scenarios":
                             logging.info("Running pvc scenario")
                             pvc_demo.run(scenarios_list, config)
 
+                        elif scenario_type == "spof_pvc_scenarios":
+                            linstorcli.initialize_clients()
+                            logging.info("Running spof pvc scenario")
+                            pvc_scenarios.run(scenarios_list,config)
+                            
                         elif scenario_type == "spof_scenarios":
                             logging.info("Running spof scenario")
                             spof_scenarios.run(scenarios_list, config)
