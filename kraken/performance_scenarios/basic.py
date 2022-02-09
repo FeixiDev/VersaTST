@@ -1,5 +1,5 @@
 import sqlite3
-from prettytable.prettytable import from_db_cursor
+from prettytable import from_db_cursor
 from matplotlib.pyplot import table
 import kraken.performance_scenarios.utils as utils
 import kraken.performance_scenarios.log as log

@@ -235,7 +235,7 @@ class SSHConn(object):
                                  username= self._username,
                                  password = self._password,
                                  timeout=self._timeout,
-                                 allow_agent=False)
+                                 allow_agent=False,look_for_keys=False)
 
             self.SSHConnection = objSSHClient
         except:
@@ -281,7 +281,7 @@ class SSHConn(object):
         cmd = "shutdown now"
         result = self.exec_cmd(cmd)
         if result["st"]:
-            logging.info("Shutdowned interface: %s",device)
+            logging.info("Shutdowned node")
             return True
 
     def sftp_upload(self, local, remote):

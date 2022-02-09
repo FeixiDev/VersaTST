@@ -4,7 +4,7 @@ import os.path
 import sqlite3
 import yaml
 import sys
-from prettytable.prettytable import from_db_cursor
+from prettytable import from_db_cursor
 
 
 

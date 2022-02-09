@@ -39,18 +39,23 @@ def run(scenarios_list, config):
 		gomet_pod_config = yaml.safe_load(f)
 		metadata_config = gomet_pod_config["metadata"]
 		go_meter_pod = metadata_config.get("name", "")
-		kubecli.create_pod(gomet_pod_config, namespace, 120)
+		kubecli.create_pod_spof(gomet_pod_config, namespace,lins_blkpvc_file, 120)
 
 	time.sleep(2)
 
 	versa_con = control.IscsiTest(stor_config)
 
+	err = versa_con.ckeck_drbd_status_spof(pvc_resoure, False)
+	if not err:	
+		err = versa_con.check_drbd_crm_res(pvc_resoure, False)
+	if err:
+		clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)
+		exit(1)	
+
 	# err = versa_con.ckeck_drbd_status_spof(pvc_resoure, False)
-	# if not err:	
-	# 	err = versa_con.check_drbd_crm_res(pvc_resoure, False)
 	# if err:
 	# 	clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)
-	# 	exit(1)	
+	# 	exit(1)
 
 	left_times = times
 	while(left_times):
@@ -75,12 +80,18 @@ def run(scenarios_list, config):
 			clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)
 			exit(1)			
 
+		err = versa_con.ckeck_drbd_status_spof(pvc_resoure, down)
+		if not err:	
+			err = versa_con.check_drbd_crm_res(pvc_resoure, down)
+		if err:
+			clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)		
+			exit(1)
+
 		# err = versa_con.ckeck_drbd_status_spof(pvc_resoure, down)
-		# if not err:	
-		# 	err = versa_con.check_drbd_crm_res(pvc_resoure, down)
 		# if err:
-		# 	clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)		
+		# 	clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)
 		# 	exit(1)
+
 
 		logging.info("Go-meter start to compare")
 		command = "cd /go/src/app;./main compare"
@@ -116,12 +127,17 @@ def run(scenarios_list, config):
 			clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)
 			exit(1)		
 
+		time.sleep(360)
 
+		err = versa_con.ckeck_drbd_status_spof(pvc_resoure, down)
+		if not err:	
+			err = versa_con.check_drbd_crm_res(pvc_resoure, down)
+		if err:
+			clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)		
+			exit(1)
 		# err = versa_con.ckeck_drbd_status_spof(pvc_resoure, down)
-		# if not err:	
-		# 	err = versa_con.check_drbd_crm_res(pvc_resoure, down)
 		# if err:
-		# 	clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)		
+		# 	clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)
 		# 	exit(1)
 
 		logging.info("Go-meter start to compare")
@@ -137,6 +153,26 @@ def run(scenarios_list, config):
 		left_times = left_times - 1
 
 	clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)
+
+
+def runtest(scenarios_list, config):
+	namespace = "kraken"
+	failed_post_scenarios = ""
+	#for app_config in scenarios_list:
+
+	lins_blkpvc_file = scenarios_list[0][0]
+	stor_file = scenarios_list[2][0]
+	gomet_pod_file = scenarios_list[1][0]
+	utils._init()
+	logger = log.Log()
+	utils.set_logger(logger)
+	stor_config = utils.ConfFile(stor_file)
+
+	versa_con = control.IscsiTest(stor_config)
+	versa_con.change_switch_port(False)
+	print(60000)
+	time.sleep(60)
+	versa_con.change_switch_port(True)
 
 
 def clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file):
@@ -159,8 +195,7 @@ def runc(scenarios_list, config):
 		kubecli.create_pod(gomet_pod_config, namespace, 120)
 
 
-
-def rund(scenarios_list, config):
+def rundd(scenarios_list, config):
 	namespace = "kraken"
 	failed_post_scenarios = ""
 	#for app_config in scenarios_list:
@@ -170,11 +205,24 @@ def rund(scenarios_list, config):
 	gomet_pod_file = scenarios_list[1][0]
 
 
-	# with open(path.join(path.dirname(__file__), gomet_pod_file)) as f:
-	# 	gomet_pod_config = yaml.full_load(f)
-	# 	scenario_config = gomet_pod_config["metadata"]
-	# 	pod_name = scenario_config.get("name", "")
-	# 	kubecli.delete_pod(pod_name, namespace)
+	kubecli.delete_pvc(lins_blkpvc_file)
+
+
+def rundd(scenarios_list, config):
+	namespace = "kraken"
+	failed_post_scenarios = ""
+	#for app_config in scenarios_list:
+
+	lins_blkpvc_file = scenarios_list[0][0]
+
+	gomet_pod_file = scenarios_list[1][0]
+
+
+	with open(path.join(path.dirname(__file__), gomet_pod_file)) as f:
+		gomet_pod_config = yaml.full_load(f)
+		scenario_config = gomet_pod_config["metadata"]
+		pod_name = scenario_config.get("name", "")
+		kubecli.delete_pod(pod_name, namespace)
 
 	kubecli.delete_pvc(lins_blkpvc_file)
 
