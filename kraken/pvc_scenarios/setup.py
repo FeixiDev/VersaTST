@@ -1,4 +1,11 @@
+# from asyncio import subprocess
+from argparse import Namespace
+from curses import flash
+import resource
+import subprocess
 from enum import Flag
+import imp
+from sys import stdout
 from tabnanny import check
 from charset_normalizer import logging
 import yaml
@@ -6,6 +13,7 @@ from os import path
 import time
 import signal
 from threading import Thread
+from kraken import pvc
 import kraken.cerberus.setup as cerberus
 import kraken.kubernetes.client as kubecli
 import kraken.invoke.command as runcommand
@@ -19,6 +27,7 @@ from linstorclient import client as linstorcli
 
 STOP_FLAG = None
 PVC_ID = 0
+NAME_SPACE = "pvctest"
 
 
 class PVCNumError(Exception):
@@ -44,8 +53,12 @@ def input_with_timeout(prompt, timeout):
 def run(scenarios_list, config):
     global STOP_FLAG
     global PVC
+
     # 检查 namespace 中是否为空
-    
+    if kubecli.list_pvc(namespace=NAME_SPACE):
+        logging.error("There already exists pvc, please clear it and try again")
+        return
+        
 
     # read pvc config
     conf = scenarios_list[0][0]
@@ -59,11 +72,18 @@ def run(scenarios_list, config):
     f.close()
 
 
+    utils._init()
+    logger = log.Log()
+    utils.set_logger(logger)
+    stor_config = utils.ConfFile(conf)
+    iscsitest = control.IscsiTest(stor_config)
+
     while times:
         STOP_FLAG = None
         PVC = 0
         # 创建
-        # Thread(target=pvc_create,args=(pvc,"pvctest",1)).start()
+        print("开始创建")
+        Thread(target=pvc_create,args=(pvc,NAME_SPACE,1)).start()
 
         # 手动故障设置
         # user_input = input_with_timeout("Enter y/yes to stop PVC creation: ",2)
@@ -71,62 +91,61 @@ def run(scenarios_list, config):
         # STOP_FLAG = True
 
         # 故障
+        print("故障设置")
         failure(kind)
 
         # 故障恢复
-        recover()
+        # recover()
+
 
         # 检查及处理
-        if not check_pvc_status("pvctest"):
-            pass
-        
-        if not check_drbd_status("pvctest"):
-            pass
+        print("开始检查")
+        if not check_pvc_status(NAME_SPACE):
+            # collect_pvc_describe(NAME_SPACE)
+            # iscsitest.get_log(False)
+            print("pvc 不为 bound 收集日志")
+                    
+        if not check_drbd_status(NAME_SPACE):
+            # collect_drbd_log(NAME_SPACE)
+            # iscsitest.get_log(False)
+            print("drbd 状态有误，收集日志")
+
+        # 检查不通过是否停止
             
 
         # 清空 pvc
-        delete_all_pvc("pvctest")
+        print("开始清空资源")
+        delete_all_pvc(NAME_SPACE)
+        time.sleep(60)
+
+
+        # ! 可能需要设置 timeout
+        # 删除后的检查 
+        print("执行清除操作后的检查")
+        if not is_clean(NAME_SPACE):
+            # collect_pvc_describe(NAME_SPACE)
+            # iscsitest.get_log(False)
+            print("没有正常清除")
+
+
+        # 恢复环境
+            
 
         # 后置检查及处理
-        
-        
-        print(times)
+        print("环境检查")
+        if not check_env(pvc,NAME_SPACE):
+            # collect_pvc_describe(NAME_SPACE)
+            # iscsitest.get_log(False)
+            print("后置检查环境失败，收集日志")
+
         times -= 1
         print("剩余次数：",times)
-        print("FLAG:",STOP_FLAG)
-        print("PVCID:",PVC)
 
 
 
 
 
 
-
-    # 清除配置
-    # delete
-    # delete_all_pvc("pvctest")
-
-    # pvc_create(pvc, "kraken", 1) # 10个之后可以设置为到配置文件，或者修改为时间，持续时间内进行创建
-
-
-    # num = pvc_create(pvc,"pvctest",3)
-    # print("Number of PVCs created: ",num)
-
-    # 等待一段时间，或者设置为一定时间内进行持续的状态检查
-
-    # 一定时间内循环监听，有触发人工输入，则停止PVC创建
-
-
-    # check
-    # check_pvc_status('kraken',10)
-
-    
-    # kubecli.create_namespace("nstest2")
-    # kubecli.delete_namespace("nstest2")
-    
-
-    # 清楚后的环境检查
-    # 
 
 def pvc_create(pvc,namesapce,timeout=3):
     time_end = time.time() + timeout
@@ -147,19 +166,17 @@ def check_pvc_status(namesapce, timeout=5 * 60):
     time_end = time.time() + timeout
     while time.time() <= time_end:
         bound_num = 0
-        pvc = kubecli.get_all_pvc_status(namespace=namesapce)
-        # if len(pvc) != num:
-        #     raise PVCNumError
-        for k,v in pvc.items():
-            if v == 'Bound':
+        pvcs = kubecli.get_all_pvc_status(namespace=namesapce)
+        for pvc,state in pvcs.items():
+            if state == 'Bound':
                 bound_num += 1
             else:
-                print(f'The status of "{k}" is not updated to "Bound"')
+                logging.info(f'The status of "{pvc}" is not updated to "Bound"')
                 break
 
-        if len(pvc) == bound_num:
+        if len(pvcs) == bound_num:
             return True
-        time.sleep(3)
+        time.sleep(3)   
 
     logging.info("check pvc status timeout")
     return False
@@ -193,12 +210,6 @@ def delete_all_pvc(namespace):
     kubecli.delete_all_pvc(namespace)
 
 
-def pvc_delete(namesapce,num):
-	for i in range(0,num):
-		name = f'pvc-test{i}'
-		kubecli.delete_pvc_(name,namesapce)
-
-
 def failure(kind):
     time.sleep(1)
     global STOP_FLAG
@@ -212,28 +223,65 @@ def recover():
     
     
 
+def is_clean(namespace):
+    pvcs = kubecli.list_pv(namespace=namespace)
+    flag = True
 
-def check_env(pvc,namespace,timeout=5 * 60):
+    if pvcs:
+        logging.error("failed to delete pvc")
+        flag = False
+
+    drbds = linstorcli.get_resource()
+    for pvc in pvcs:
+        for drbd in drbds:
+            if drbd["Resource"] == pvc:
+                logging.error("drbd not cleared")
+                flag = False
+                return flag
+    return flag
+
+
+
+
+def check_env(pvc,namespace):
     global PVC_ID
     PVC_ID += 1
     pvc['metadata']['name'] = f'pvc-test{PVC_ID}'
-    kubecli.create_pvc_(pvc,"pvctest")
-    if check_pvc_status("pvctest") and check_drbd_status("pvctest"):
+    kubecli.create_pvc_(pvc,NAME_SPACE)
+    if check_pvc_status(NAME_SPACE) and check_drbd_status(NAME_SPACE):
         kubecli.delete_pvc_(pvc['metadata']['name'],namespace)
     
     # 检查删除情况
+    if is_clean(namespace):
+        return True
 
 
-
-def collect_log(namespace):
+def collect_pvc_describe(namespace):
     # 收集状态不是Bound的 pvc 的相关信息
-    pvc = kubecli.get_all_pvc_status(namespace=namesapce)
-    for k,v in pvc.items():
-        if v != 'Bound':
+    pvcs = kubecli.get_all_pvc_status(namespace=namespace)
+    for pvc,state in pvcs.items():
+        if state != 'Bound':
             # 收集信息
             # crm_report、kubectl describe PVC和dmesg信息
-            cmd = f'kubectl decribe pvc {k} -n {namespace}'
+            describe = get_pvc_describe(pvc,namespace)
+            logging.error(describe)
+
+
+def collect_drbd_log(namespace):
+    pvcs = kubecli.list_pv(namespace=namespace)
+    success_flag = ['UpToDate','Diskless']
+    resources = linstorcli.get_resource()
+
+    for pvc in pvcs:
+        for res in resources:
+            if res["Resource"] == pvc and res["State"]  not in success_flag:
+                # 收集日志
+                describe = get_pvc_describe(pvc,namespace)
+                logging.error(describe)
 
     
+def get_pvc_describe(pvc,namespace):
+    pvc_descibe =  subprocess.getoutput(f'kubectl describe pvc {pvc} -n {namespace}')
+    return pvc_descibe
 
             
