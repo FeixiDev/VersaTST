@@ -151,17 +151,30 @@ class TELConn(object):
 
     def down_port(self,port):# time 12s
         self.tel.write(b"configure terminal\n")
+        time.sleep(2)
         self.tel.write(b"enable\n")
-        self.tel.write(b"interface %s\n", port)
+        time.sleep(2)
+        cmd = "interface %s\n" % port
+        cmd = bytes(cmd, encoding='utf-8')
+        self.tel.write(cmd)
+        time.sleep(2)
         self.tel.write(b"shutdown\n")
+        time.sleep(2)
+
 
     def nodown_port(self,port):# time 12s
         self.tel.write(b"configure terminal\n")
+        time.sleep(2)
         self.tel.write(b"enable\n")
-        self.tel.write(b"interface %s\n", port)
+        time.sleep(2)
+        cmd = "interface %s\n" % port
+        cmd = bytes(cmd, encoding='utf-8')
+        self.tel.write(cmd)
+        time.sleep(2)
         self.tel.write(b"no shutdown\n")
+        time.sleep(2)
 
-    def nodown_port1(self,port):# time 12s
+    def down_port11(self,port):# time 12s
         self.tel.write(b'show boot\n')
         MODE_INF = self.tel.read_until(b'ddfffffd',timeout = 3)
         print(MODE_INF)
@@ -230,10 +243,10 @@ class IscsiTest(object):
         crm_status = iscsi_obj.get_crm_status()
         err = check_crm_node_status(crm_status, self.config, have_down)
 
-        error_message = get_crm_status_by_type(crm_status, None, "FailedActions")
-        if error_message:
-            utils.prt_log('', error_message, 1)
-            err = True
+        # error_message = get_crm_status_by_type(crm_status, None, "FailedActions")
+        # if error_message:
+        #     utils.prt_log('', error_message, 1)
+        #     err = True
 
         all_resource_status = get_crm_status_by_type(crm_status, None, "AllLUN")
         if all_resource_status:
@@ -244,10 +257,9 @@ class IscsiTest(object):
                 if status[1] != 'Started':
                     utils.prt_log(conn, f"{tips}{status[0]} status is {status[1]}", 1)
                     err = True
-        else:
-            utils.prt_log(conn, f"Can't get crm status", 1)
-            err = True
+
         if err:
+            utils.prt_log(conn, f"crm status is unnormal", 1)
             self.get_log(have_down)
         return err
 
@@ -313,9 +325,9 @@ class IscsiTest(object):
         port = self.config.get_switch_port()["port"]
         switch = TELConn(ip)
         if on:
-            switch.nodown_port1(port)
+            switch.nodown_port(port)
         else:
-            switch.nodown_port1(port)
+            switch.down_port(port)
 
     def ckeck_drbd_status_spof(self, resource, have_down):
         err = False
@@ -329,16 +341,31 @@ class IscsiTest(object):
                 all_lun_string = " ".join(self.lun_list)
             else:
                 all_lun_string = resource
-            resource_status_result = stor_obj.get_linstor_res(all_lun_string)
-            resource_status = check_drbd_conns_status(resource_status_result)
-            for status in resource_status:
-                if status[1] != "Ok":
-                    flag = flag + 1
-                if status[2] != "UpToDate" and status[2] != "Diskless":
-                    flag = flag + 1
-            if flag != 2:
-                utils.prt_log(self.conn.list_normal_vplx_ssh[0], f"When down node, resource status is not correct", 1)
-                result = False
+            times = 7
+            while(times):
+
+                resource_status_result = stor_obj.get_linstor_res(all_lun_string)
+                resource_status = check_drbd_conns_status(resource_status_result)
+                print(resource_status)
+                if resource_status:
+                    break
+                time.sleep(1)
+                times = times - 1
+            if resource_status:
+                for status in resource_status:
+                    print(status)
+                    if status[1] != "Ok":
+                        if not "Connecting" in status[1]:
+                            flag = flag + 1
+                    if status[2] != "UpToDate" and status[2] != "Diskless":
+                        flag = flag + 1
+                if flag != 2:
+                    utils.prt_log(self.conn.list_normal_vplx_ssh[0], f"When down node, resource status is not correct", 1)
+                    result = False
+
+            else:
+                err = True
+                utils.prt_log('', f"can't get resource status after down node", 1)
         if not result:
             err = True
             self.get_log(have_down)
@@ -352,8 +379,16 @@ class IscsiTest(object):
             all_lun_string = " ".join(self.lun_list)
         else:
             all_lun_string = resource
-        resource_status_result = stor_obj.get_linstor_res(all_lun_string)
-        resource_status = check_drbd_conns_status(resource_status_result)
+
+        times = 7
+        while(times):
+            resource_status_result = stor_obj.get_linstor_res(all_lun_string)
+            resource_status = check_drbd_conns_status(resource_status_result)
+            print(resource_status)
+            if resource_status:
+                break
+            time.sleep(1)
+            times = times - 1
         if resource_status:
             for status in resource_status:
                 if status[1] != "Ok":
@@ -363,8 +398,8 @@ class IscsiTest(object):
                     utils.prt_log(self.conn.list_normal_vplx_ssh[0], f"Resource {status[0]} status is {status[2]}", 1)
                     flag = False
         else:
-            utils.prt_log('',f"Get {resource} status failed ",1)
             flag = False
+            utils.prt_log('',f"Get {resource} status failed ",1)
         return flag
 
     def restore_resource(self, resource):

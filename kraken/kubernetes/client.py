@@ -88,6 +88,28 @@ def create_pod(body, namespace, timeout=120):
         delete_pod(body["metadata"]["name"], namespace)
         sys.exit(1)
 
+def create_pod_spof(body, namespace, pvcfile, timeout=120):
+    try:
+        pod_stat = None
+        pod_stat = cli.create_namespaced_pod(body=body, namespace=namespace)
+        end_time = time.time() + timeout
+        while True:
+            pod_stat = cli.read_namespaced_pod(name=body["metadata"]["name"], namespace=namespace)
+            if pod_stat.status.phase == "Running":
+                logging.info("Successfully create pod")
+                break
+            if time.time() > end_time:
+                raise Exception("Starting pod failed")
+            time.sleep(1)
+    except Exception as e:
+        logging.error("Pod creation failed %s" % e)
+        if pod_stat:
+            logging.error(pod_stat.status.container_statuses)
+        delete_pod(body["metadata"]["name"], namespace)
+        delete_pvc(pvcfile)
+        sys.exit(1)
+
+
 # List all namespaces
 def list_namespaces(label_selector=None):
     namespaces = []
