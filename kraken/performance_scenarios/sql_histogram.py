@@ -1,7 +1,7 @@
 import sqlite3
 import numpy as np
 import matplotlib as mpl
-from prettytable import from_db_cursor
+from prettytable.prettytable import from_db_cursor
 import yaml
 mpl.use ('Agg')
 # mpl.use ('TKAgg')

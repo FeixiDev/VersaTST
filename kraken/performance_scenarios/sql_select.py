@@ -1,6 +1,6 @@
 import sqlite3
 import csv
-from prettytable import from_db_cursor
+from prettytable.prettytable import from_db_cursor
 import yaml
 # import Performance_get_config as gc
 # import sql_chart as gcdb

@@ -155,7 +155,7 @@ def run(scenarios_list, config):
 	clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)
 
 
-def runtest(scenarios_list, config):
+def runtst(scenarios_list, config):
 	namespace = "kraken"
 	failed_post_scenarios = ""
 	#for app_config in scenarios_list:

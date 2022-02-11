@@ -5,7 +5,7 @@ import matplotlib
 matplotlib.use ('Agg')
 import matplotlib.pyplot as plt
 import yaml
-from prettytable import from_db_cursor
+from prettytable.prettytable import from_db_cursor
 import kraken.performance_scenarios.utils as utils
 import kraken.performance_scenarios.log as log
 
