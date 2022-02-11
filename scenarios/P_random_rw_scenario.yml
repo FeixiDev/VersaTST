@@ -1,0 +1,13 @@
+#random read/write scenario test
+
+run_count: 1
+run_time: 10
+test_device_info: [/dev/sdb,/dev/sdc] 
+size: 70%
+
+unique_ID: 40001
+write_to_excel: True
+line_chart: True
+histogram: True
+
+        

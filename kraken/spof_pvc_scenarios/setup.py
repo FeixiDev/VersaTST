@@ -53,7 +53,7 @@ def input_with_timeout(prompt, timeout):
 def run(scenarios_list, config):
     global STOP_FLAG
     global PVC
-    
+
     # 检查 namespace 中是否为空
     if kubecli.list_pvc(namespace=NAME_SPACE):
         logging.error("There already exists pvc, please clear it and try again")

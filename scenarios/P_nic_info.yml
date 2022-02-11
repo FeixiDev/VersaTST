@@ -1,0 +1,8 @@
+kind: interface_down  #node_down, interface_down, switch_port_down, hand_operation
+down_up_nic_scenario:
+  down_up_interface_host:
+    hostname: test2
+    port: 22
+    public_ip: 192.168.x.x
+    password: ******
+    interface: ens11

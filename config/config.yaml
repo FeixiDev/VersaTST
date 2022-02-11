@@ -9,9 +9,11 @@ kraken:
     litmus_uninstall: False                                # If you want to uninstall litmus if failure
     chaos_scenarios:                                       # List of policies/chaos scenarios to load
         -   pvc_scenarios:
-            - -    ./res_file/spof_pvc.yaml                                 # List of chaos pod scenarios to load
-            - -    ./res_file/spof_dep.yaml
-            - -    scenarios/pvc_scenario.yaml    
+            - -    scenarios/spof_pvc_scenario.yaml
+            # - -    /kubernetes/res_file/pvctest.yaml   
+            #- -    /kubernetes/res_file/spof_pvc.yaml                                 # List of chaos pod scenarios to load
+            # - -    ./res_file/spof_dep.yaml
+            # - -    scenarios/pvc_scenario.yaml    
         # -   spof_scenarios:                                 # List of chaos pod scenarios to load
         #     - -    ./res_file/spof_pvc.yaml
 
