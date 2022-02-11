@@ -109,12 +109,21 @@ def get_volume_state(volume_states, volume_nr):
     return None
 
 def get_resource(node=None,storagepool=None,resource=None):
-    try:
-        msg = cli.volume_list(node,storagepool,resource)[0]
-    except linstor.errors.LinstorNetworkError:
-        logging.info("Failed to connect to linstor, automatic retry later")
-        time.sleep(10)
-        msg = cli.volume_list(node,storagepool,resource)[0]
+    while True:
+        try:
+            msg = cli.volume_list(node,storagepool,resource)[0]
+            break
+        except linstor.errors.LinstorNetworkError:
+            logging.error("Failed to connect to linstor, automatic retry later")
+            time.sleep(5)
+
+
+    # try:
+    #     msg = cli.volume_list(node,storagepool,resource)[0]
+    # except linstor.errors.LinstorNetworkError:
+    #     logging.error("Failed to connect to linstor, automatic retry later")
+    #     time.sleep(10)
+    #     msg = cli.volume_list(node,storagepool,resource)[0]
     lst = []
     rsc_state_lkup = {x.node_name + x.name: x for x in msg.resource_states}
 

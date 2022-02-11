@@ -1,23 +1,11 @@
 # from asyncio import subprocess
-from argparse import Namespace
-from curses import flash
-import resource
 import subprocess
-from enum import Flag
-import imp
-from sys import stdout
-from tabnanny import check
 from charset_normalizer import logging
 import yaml
-from os import path
 import time
 import signal
 from threading import Thread
-from kraken import pvc
-import kraken.cerberus.setup as cerberus
 import kraken.kubernetes.client as kubecli
-import kraken.invoke.command as runcommand
-import kraken.pvc.pvc_scenario as pvc_scenario
 import sshv.utils as utils
 import sshv.log as log
 import sshv.control as control
@@ -71,7 +59,6 @@ def run(scenarios_list, config):
     pvc = yaml.safe_load(f)
     f.close()
 
-
     utils._init()
     logger = log.Log()
     utils.set_logger(logger)
@@ -92,10 +79,10 @@ def run(scenarios_list, config):
 
         # 故障
         print("故障设置")
-        failure(kind)
+        # failure(kind,iscsitest)
 
         # 故障恢复
-        # recover()
+        # recover(kind,iscsitest)
 
 
         # 检查及处理
@@ -118,8 +105,6 @@ def run(scenarios_list, config):
         delete_all_pvc(NAME_SPACE)
         time.sleep(60)
 
-
-        # ! 可能需要设置 timeout
         # 删除后的检查 
         print("执行清除操作后的检查")
         if not is_clean(NAME_SPACE):
@@ -147,7 +132,7 @@ def run(scenarios_list, config):
 
 
 
-def pvc_create(pvc,namesapce,timeout=3):
+def pvc_create(pvc,namesapce,timeout=2):
     time_end = time.time() + timeout
     global PVC_ID
     while time.time() <= time_end:
@@ -157,6 +142,7 @@ def pvc_create(pvc,namesapce,timeout=3):
         PVC_ID += 1
         pvc['metadata']['name'] = f'pvc-test{PVC_ID}'
         kubecli.create_pvc_(pvc,namesapce)
+        time.sleep(0.5)
     return PVC_ID
 
 
@@ -187,7 +173,7 @@ def check_drbd_status(namespace,timeout= 60):
     replicas = 3
     success_flag = ['UpToDate','Diskless']
 
-    # time.sleep(10)
+    time.sleep(10)
     while time.time() <= time_end:
         success_pvc = 0
         resources = linstorcli.get_resource()
@@ -204,40 +190,54 @@ def check_drbd_status(namespace,timeout= 60):
 
     logging.info("check drbd status timeout")
     return False
+
     
 
 def delete_all_pvc(namespace):
     kubecli.delete_all_pvc(namespace)
 
 
-def failure(kind):
-    time.sleep(1)
+def failure(kind,iscsitest):
     global STOP_FLAG
     STOP_FLAG = True
     if kind == 'down_inferface':
-        pass
+        iscsitest.change_node_interface(False)
+    elif kind == 'switch_port_down':
+        iscsitest.change_switch_port(False)
+        
 
-def recover():
+def recover(kind, iscsitest):
     # 故障恢复
-    pass
+    if kind == 'switch_port_down':
+        iscsitest.change_switch_port(True)
+    elif kind == 'down_inferface':
+        iscsitest.change_node_interface(True)
+        
     
     
 
-def is_clean(namespace):
-    pvcs = kubecli.list_pv(namespace=namespace)
-    flag = True
+def is_clean(namespace, timeout= 3*60):
+    time_end = time.time() + timeout
+    while time.time() <= time_end:
+        flag = True
+        pvcs = kubecli.list_pv(namespace=namespace)
+        if pvcs:
+            logging.info("pvc still exists")
+            flag = False
 
-    if pvcs:
-        logging.error("failed to delete pvc")
-        flag = False
+        drbds = linstorcli.get_resource()
+        for pvc in pvcs:
+            for drbd in drbds:
+                if drbd["Resource"] == pvc:
+                    logging.info("drbd still exists")
+                    flag = False
+                    break
 
-    drbds = linstorcli.get_resource()
-    for pvc in pvcs:
-        for drbd in drbds:
-            if drbd["Resource"] == pvc:
-                logging.error("drbd not cleared")
-                flag = False
-                return flag
+        if flag == True:
+            return flag
+
+        time.sleep(3)
+
     return flag
 
 
