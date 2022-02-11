@@ -22,7 +22,7 @@ import kraken.zone_outage.actions as zone_outages
 import kraken.application_outage.actions as application_outage
 import kraken.spof_scenarios.setup as spof_scenarios
 import kraken.pvc_demo.setup as pvc_demo
-import kraken.pvc_scenarios.setup as pvc_scenarios
+import kraken.spof_pvc_scenarios.setup as spof_pvc_scenarios
 import server as server
 
 import linstorclient.client as linstorcli
@@ -225,7 +225,7 @@ def main(cfg):
                         elif scenario_type == "spof_pvc_scenarios":
                             logging.info("Running spof pvc scenario")
                             linstorcli.initialize_clients()
-                            pvc_scenarios.run(scenarios_list,config)
+                            spof_pvc_scenarios.run(scenarios_list,config)
                             
                         elif scenario_type == "spof_scenarios":
                             logging.info("Running spof scenario")
