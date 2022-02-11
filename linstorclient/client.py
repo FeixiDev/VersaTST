@@ -115,7 +115,6 @@ def get_resource(node=None,storagepool=None,resource=None):
         logging.info("Failed to connect to linstor, automatic retry later")
         time.sleep(10)
         msg = cli.volume_list(node,storagepool,resource)[0]
-        
     lst = []
     rsc_state_lkup = {x.node_name + x.name: x for x in msg.resource_states}
 

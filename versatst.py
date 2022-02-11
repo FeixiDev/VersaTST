@@ -223,8 +223,8 @@ def main(cfg):
                             pvc_demo.run(scenarios_list, config)
 
                         elif scenario_type == "spof_pvc_scenarios":
-                            linstorcli.initialize_clients()
                             logging.info("Running spof pvc scenario")
+                            linstorcli.initialize_clients()
                             pvc_scenarios.run(scenarios_list,config)
                             
                         elif scenario_type == "spof_scenarios":
