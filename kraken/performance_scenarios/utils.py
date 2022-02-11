@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import paramiko
 import socket
 import subprocess
@@ -7,10 +8,10 @@ import re
 import time
 import traceback
 from functools import wraps
-from sshv import log as log
+import kraken.performance_scenarios.log
 import os
 from stat import S_ISDIR as isdir
-import logging
+
 
 def _init():  # 全局变量初始化
     global _GLOBAL_DICT
@@ -59,18 +60,35 @@ def prt_log(conn, str_, warning_level):
     :param logger: Logger object for logging
     :param print_str: Strings to be printed and recorded
     """
+    time_n = time.localtime(time.time())
+    Date = time.strftime('%Y-%m-%d %H:%M:%S',time_n) 
     logger = get_logger()
+    print(Date,str(str_))
     if warning_level == 0:
-        logging.info(str(str_))
         logger.write_to_log(conn, 'INFO', 'INFO', 'finish', 'output', str_)
     elif warning_level == 1:
-        logging.warning(str(str_))
         logger.write_to_log(conn, 'INFO', 'WARNING', 'fail', 'output', str_)
     elif warning_level == 2:
         logger.write_to_log(conn, 'INFO', 'ERROR', 'exit', 'output', str_)
-        logging.error(str(str_))
         sys.exit()
 
+def write_log(conn, str_, warning_level):
+    """
+    print, write to log and exit.
+    :param logger: Logger object for logging
+    :param print_str: Strings to be printed and recorded
+    """
+    time_n = time.localtime(time.time())
+    Date = time.strftime('%Y-%m-%d %H:%M:%S',time_n) 
+    logger = get_logger()
+    # print(Date,str(str_))
+    if warning_level == 0:
+        logger.write_to_log(conn, 'INFO', 'INFO', 'finish', 'output', str_)
+    elif warning_level == 1:
+        logger.write_to_log(conn, 'INFO', 'WARNING', 'fail', 'output', str_)
+    elif warning_level == 2:
+        logger.write_to_log(conn, 'INFO', 'ERROR', 'exit', 'output', str_)
+        sys.exit()
 
 def deco_yaml_dict(func):
     """
@@ -215,7 +233,6 @@ def re_findall(re_string, tgt_string):
     return re_result
 
 
-
 class SSHConn(object):
 
     def __init__(self, host, port=22, username="root", password=None, timeout=8):
@@ -231,12 +248,13 @@ class SSHConn(object):
         try:
             objSSHClient = paramiko.SSHClient()
             objSSHClient.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            objSSHClient.connect(hostname = self._host, port=self._port,
-                                 username= self._username,
-                                 password = self._password,
+            objSSHClient.connect(self._host, port=self._port,
+                                 username=self._username,
+                                 password=self._password,
                                  timeout=self._timeout,
-                                 allow_agent=False,look_for_keys=False)
-
+                                 allow_agent=False)
+            # time.sleep(1)
+            # objSSHClient.exec_command("\x003")
             self.SSHConnection = objSSHClient
         except:
             print(f" Failed to connect {self._host}")
@@ -262,26 +280,22 @@ class SSHConn(object):
                 data = data.decode() if isinstance(data, bytes) else data
                 return {"st": True, "rt": data}
 
-
     def down_interface(self, device):
         cmd = f"ifconfig {device} down"
         result = self.exec_cmd(cmd)
         if result["st"]:
-            logging.info("Shutdowned interface: %s",device)
+            str_info = 'Shutdowned interface:' + str(device)
+            prt_log('',str_info,0)
             return True
 
     def up_interface(self, device):
         cmd = f"ifconfig {device} up"
         result = self.exec_cmd(cmd)
         if result["st"]:
-            logging.info("Opened interface: %s",device)
-            return True
+            str_info = 'Opened interface:' + str(device)
+            prt_log('',str_info,0)
 
-    def down_self(self):
-        cmd = "shutdown now"
-        result = self.exec_cmd(cmd)
-        if result["st"]:
-            logging.info("Shutdowned node")
+            
             return True
 
     def sftp_upload(self, local, remote):
@@ -339,7 +353,7 @@ class SSHConn(object):
         sf.connect(username=self._username, password=self._password)
         sftp = paramiko.SFTPClient.from_transport(sf)
         self.download(sftp, remote, local)
-        return {"st": True, "rt": f"{local} ==> {remote}"}
+        return {"st": True, "rt": f"{remote} ==> {local}"}
 
     def download(self, sftp, remote, local):
         # 检查远程文件是否存在
@@ -389,9 +403,6 @@ class SSHConn(object):
                 data = data.decode() if isinstance(data, bytes) else data
                 return {"st": True, "rt": data}
             return {"st": True, "rt": result}
-
-
-
 
 
 class ConfFile(object):
@@ -457,67 +468,13 @@ class ConfFile(object):
         return self.config["device"]
 
     @deco_yaml_dict
-    def get_kind(self):
-        return self.config["kind"]
-
-    @deco_yaml_dict
-    def get_number_of_times(self):
-        return self.config["times"]
-
-
-    @deco_yaml_dict
-    def get_interface_inf(self):
-        scenario_config = self.config["spof_scenario"]
-        down_interface_host = scenario_config["down_interface_host"]
+    def get_P_interface_info(self):
+        scenario_config = self.config["down_up_nic_scenario"]
+        down_interface_host = scenario_config["down_up_interface_host"]
         hostname = down_interface_host["hostname"]
         port = down_interface_host["port"]
         ip = down_interface_host["public_ip"]
         password = down_interface_host["password"]
         interf = down_interface_host["interface"]
-        return {"hostname":hostname,"port":port,"ip":ip,"password":password,"interface":interf}
-
-    @deco_yaml_dict
-    def get_hostname(self):
-        hostname_list = []
-        for vplx_config in self.config["versaplx"]:
-            if not check_ip(vplx_config['public_ip']):
-                prt_log(None, f"Please check the config of {vplx_config['public_ip']}", 2)
-            hostname_list.append(vplx_config['hostname'])
-        return hostname_list
-
-    @deco_yaml_dict
-    def get_up_hostname(self):
-        hostname_list = []
-        scenario_config = self.config["spof_scenario"]
-        down_host = scenario_config["down_host"]
-        down_hostname = down_host["hostname"]  
-             
-        for vplx_config in self.config["versaplx"]:
-            if not check_ip(vplx_config['public_ip']):
-                prt_log(None, f"Please check the config of {vplx_config['public_ip']}", 2)
-            if vplx_config['hostname'] != down_hostname:
-                hostname_list.append(vplx_config['hostname'])
-        return hostname_list
-
-    @deco_yaml_dict
-    def get_down_node(self):
-        scenario_config = self.config["spof_scenario"]
-        down_host = scenario_config["down_host"]
-        hostname = down_host["hostname"]
-        port = down_host["port"]
-        ip = down_host["public_ip"]
-        password = down_host["password"]
-        return {"hostname":hostname,"port":port,"ip":ip,"password":password}
-
-
-    @deco_yaml_dict
-    def get_switch_port(self):
-        hostn_list = []
-        scenario_config = self.config["spof_scenario"]
-        down_host = scenario_config["down_switch"]
-        ip = down_host["ip"]
-        port = down_host["port"]
-
-        return {"ip":ip, "port":port}
-
+        return hostname,port,ip,password,interf
 
