@@ -2,6 +2,7 @@ import re
 import logging
 import sys
 import time
+import http
 
 try:
     import linstor
@@ -116,6 +117,11 @@ def get_resource(node=None,storagepool=None,resource=None):
         except linstor.errors.LinstorNetworkError:
             logging.error("Failed to connect to linstor, automatic retry later")
             time.sleep(5)
+            initialize_clients()
+        except http.client.CannotSendRequest:
+            logging.error("Failed to connect to linstor, automatic retry later")
+            time.sleep(5)
+            initialize_clients()
 
 
     # try:

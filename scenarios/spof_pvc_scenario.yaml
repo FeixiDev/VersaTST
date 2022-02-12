@@ -1,7 +1,9 @@
 log_path: /home/ubuntu/versatstcrm
-kind: interface_down  #node_down, interface_down, switch_port_down, hand_operation
+kind: interface_down  #interface_down, switch_port_down, manual
 times: 2
 pvc: /kubernetes/res_file/pvctest.yaml
+vip: pt1
+linstor_controller: g_linstor
 spof_scenario:
   down_switch:
     ip: 10.203.1.202
