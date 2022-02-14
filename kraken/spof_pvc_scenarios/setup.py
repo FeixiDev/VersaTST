@@ -75,15 +75,18 @@ def run(scenarios_list, config):
             # collect_pvc_describe(NAME_SPACE)
             # actuator.get_log(False)
             print("pvc 不为 bound 收集日志")
+            STOP_CREATE = True
                     
         if not check_drbd_status(NAME_SPACE):
             # collect_drbd_log(NAME_SPACE)
             # actuator.get_log(False)
             print("drbd 状态有误，收集日志")
+            STOP_CREATE = True
 
         # 检查不通过是否停止
-            
-
+        if STOP_CREATE:
+            return
+        
         # 清空 pvc
         print("开始清空资源")
         delete_all_pvc(NAME_SPACE)
@@ -105,8 +108,7 @@ def run(scenarios_list, config):
                 print("资源已转移")
                 # actuator.get_log(False)
                 
-            
-
+        
         # 后置检查及处理
         print("环境检查")
         if not check_env(pvc,NAME_SPACE):
