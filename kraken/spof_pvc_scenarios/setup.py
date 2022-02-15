@@ -54,12 +54,15 @@ def run(scenarios_list, config):
     while times:
         STOP_FLAG = None
         PVC_ID = 0
+        create_timeout = 1
         # 创建
         print("开始创建")
-        Thread(target=pvc_create,args=(pvc,NAME_SPACE,1)).start()
+        logging.info("start creating pvc")
+        Thread(target=pvc_create,args=(pvc,NAME_SPACE,create_timeout)).start()
 
 
         print("故障设置")
+        logging.info("start setting failure")
         # 人工故障设置, kind 设置为 'manual' 时启动
         if fault_setter.manual_setting():
             STOP_FLAG = True
@@ -71,50 +74,62 @@ def run(scenarios_list, config):
 
         # 检查及处理
         print("开始检查")
+        logging.info("start checking resource status")
         if not check_pvc_status(NAME_SPACE):
-            # collect_pvc_describe(NAME_SPACE)
-            # actuator.get_log(False)
+            collect_pvc_describe(NAME_SPACE)
+            actuator.get_log(False)
             print("pvc 不为 bound 收集日志")
             STOP_CREATE = True
                     
         if not check_drbd_status(NAME_SPACE):
-            # collect_drbd_log(NAME_SPACE)
-            # actuator.get_log(False)
+            collect_drbd_log(NAME_SPACE)
+            actuator.get_log(False)
             print("drbd 状态有误，收集日志")
             STOP_CREATE = True
 
         # 检查不通过是否停止
         if STOP_CREATE:
+            logging.info("resource status is not passed, exit")
             return
+
+
+        # 检查资源是否转移
+        if spof_pvc_conf['kind'] == 'interface_down':
+            if fault_setter.check_running_node():
+                print("资源已转移")
+                logging.info("resources have been moved to other nodes")
+                actuator.get_log(False)
+
         
         # 清空 pvc
         print("开始清空资源")
+        logging.info("start clearing resources")
         delete_all_pvc(NAME_SPACE)
 
         # 删除后的检查 
         print("执行清除操作后的检查")
+        logging.info("start environment check")
         if not is_clean(NAME_SPACE):
-        #     # collect_pvc_describe(NAME_SPACE)
-        #     # actuator.get_log(False)
+            collect_pvc_describe(NAME_SPACE)
+            actuator.get_log(False)
             print("没有正常清除")
+            return
 
 
         # 恢复环境
+        logging.info("recovery environment")
         fault_setter.recover()
         time.sleep(10)
         
-        if spof_pvc_conf['kind'] == 'interface_down':
-            if fault_setter.check_running_node():
-                print("资源已转移")
-                # actuator.get_log(False)
-                
-        
         # 后置检查及处理
         print("环境检查")
+        logging.info("check if the environment is normal")
         if not check_env(pvc,NAME_SPACE):
-        #     # collect_pvc_describe(NAME_SPACE)
-        #     # actuator.get_log(False)
+            collect_pvc_describe(NAME_SPACE)
+            actuator.get_log(False)
             print("后置检查环境失败，收集日志")
+            logging.info("environment does not pass inspection")
+            return
 
         times -= 1
         print("剩余次数：",times)
@@ -145,7 +160,6 @@ def check_pvc_status(namesapce, timeout=5 * 60):
             if state == 'Bound':
                 bound_num += 1
             else:
-                logging.info(f'The status of "{pvc}" is not updated to "Bound"')
                 break
 
         if len(pvcs) == bound_num:
@@ -175,6 +189,8 @@ def check_drbd_status(namespace,timeout= 60):
 
         if len(pvcs) == success_pvc:
             return True
+        
+        time.sleep(5)
 
     logging.info("check drbd status timeout")
     return False
@@ -282,13 +298,13 @@ class FaultSetter():
             # self.actuator.change_switch_port(False)
             pass
 
-    def manual_setting(self):
+    def manual_setting(self,timeout=2):
         if self.kind == 'manual':
-            user_input = self.input_with_timeout("Enter y/yes to stop PVC creation: ",2)
+            user_input = self.input_with_timeout("Enter y/yes to stop PVC creation: ",timeout)
             if user_input == 'y' or user_input == 'yes':
                 return True
             else:
-                time.sleep(5)
+                time.sleep(timeout)
                 
 
 
