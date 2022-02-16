@@ -56,35 +56,36 @@ def run(scenarios_list, config):
         PVC_ID = 0
         create_timeout = 1
         # 创建
-        print("开始创建")
+        # print("开始创建")
         logging.info("start creating pvc")
         Thread(target=pvc_create,args=(pvc,NAME_SPACE,create_timeout)).start()
 
 
-        print("故障设置")
+        # print("故障设置")
         logging.info("start setting failure")
         # 人工故障设置, kind 设置为 'manual' 时启动
         if fault_setter.manual_setting():
             STOP_FLAG = True
-            print("已停止创建")
+            logging.info("stop the creation of pvc")
+            # print("已停止创建")
 
         # 故障
         STOP_FLAG = True
         fault_setter.setting()
 
         # 检查及处理
-        print("开始检查")
+        # print("开始检查")
         logging.info("start checking resource status")
         if not check_pvc_status(NAME_SPACE):
+            logging.info("The pvc status is not passed, log collection is performed")
             collect_pvc_describe(NAME_SPACE)
             actuator.get_log(False)
-            print("pvc 不为 bound 收集日志")
             STOP_CREATE = True
                     
         if not check_drbd_status(NAME_SPACE):
+            logging.info("The drbd status is not passed, log collection is performed")
             collect_drbd_log(NAME_SPACE)
             actuator.get_log(False)
-            print("drbd 状态有误，收集日志")
             STOP_CREATE = True
 
         # 检查不通过是否停止
@@ -96,23 +97,22 @@ def run(scenarios_list, config):
         # 检查资源是否转移
         if spof_pvc_conf['kind'] == 'interface_down':
             if fault_setter.check_running_node():
-                print("资源已转移")
                 logging.info("resources have been moved to other nodes")
                 actuator.get_log(False)
 
         
         # 清空 pvc
-        print("开始清空资源")
+        # print("开始清空资源")
         logging.info("start clearing resources")
         delete_all_pvc(NAME_SPACE)
 
         # 删除后的检查 
-        print("执行清除操作后的检查")
+        # print("执行清除操作后的检查")
         logging.info("start environment check")
         if not is_clean(NAME_SPACE):
+            logging.info("The resource is not cleared normally, log collection is performed")
             collect_pvc_describe(NAME_SPACE)
             actuator.get_log(False)
-            print("没有正常清除")
             return
 
 
@@ -122,17 +122,17 @@ def run(scenarios_list, config):
         time.sleep(10)
         
         # 后置检查及处理
-        print("环境检查")
+        # print("环境检查")
         logging.info("check if the environment is normal")
         if not check_env(pvc,NAME_SPACE):
             collect_pvc_describe(NAME_SPACE)
             actuator.get_log(False)
-            print("后置检查环境失败，收集日志")
+            # print("后置检查环境失败，收集日志")
             logging.info("environment does not pass inspection")
             return
 
         times -= 1
-        print("剩余次数：",times)
+        print("* remaining times:",times)
         
         
         
