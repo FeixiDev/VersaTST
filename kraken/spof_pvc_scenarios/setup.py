@@ -54,27 +54,24 @@ def run(scenarios_list, config):
     while times:
         STOP_FLAG = None
         PVC_ID = 0
+        STOP_CREATE = False
         create_timeout = 1
         # 创建
-        # print("开始创建")
         logging.info("start creating pvc")
         Thread(target=pvc_create,args=(pvc,NAME_SPACE,create_timeout)).start()
 
 
-        # print("故障设置")
         logging.info("start setting failure")
         # 人工故障设置, kind 设置为 'manual' 时启动
         if fault_setter.manual_setting():
             STOP_FLAG = True
             logging.info("stop the creation of pvc")
-            # print("已停止创建")
 
         # 故障
         STOP_FLAG = True
         fault_setter.setting()
 
         # 检查及处理
-        # print("开始检查")
         logging.info("start checking resource status")
         if not check_pvc_status(NAME_SPACE):
             logging.info("The pvc status is not passed, log collection is performed")
@@ -102,15 +99,14 @@ def run(scenarios_list, config):
 
         
         # 清空 pvc
-        # print("开始清空资源")
         logging.info("start clearing resources")
         delete_all_pvc(NAME_SPACE)
 
         # 删除后的检查 
-        # print("执行清除操作后的检查")
         logging.info("start environment check")
         if not is_clean(NAME_SPACE):
-            logging.info("The resource is not cleared normally, log collection is performed")
+            logging.info("The resource is not cleared normally")
+            logging.info("collect logs")
             collect_pvc_describe(NAME_SPACE)
             actuator.get_log(False)
             return
@@ -122,13 +118,12 @@ def run(scenarios_list, config):
         time.sleep(10)
         
         # 后置检查及处理
-        # print("环境检查")
         logging.info("check if the environment is normal")
         if not check_env(pvc,NAME_SPACE):
+            logging.info("environment does not pass inspection")
+            logging.info("collect logs")
             collect_pvc_describe(NAME_SPACE)
             actuator.get_log(False)
-            # print("后置检查环境失败，收集日志")
-            logging.info("environment does not pass inspection")
             return
 
         times -= 1
@@ -136,7 +131,7 @@ def run(scenarios_list, config):
         
         
         
-def pvc_create(pvc,namesapce,timeout=3):
+def pvc_create(pvc,namesapce,timeout=2):
     time_end = time.time() + timeout
     global PVC_ID
     global STOP_FLAG
@@ -147,7 +142,6 @@ def pvc_create(pvc,namesapce,timeout=3):
         PVC_ID += 1
         pvc['metadata']['name'] = f'pvc-test{PVC_ID}'
         kubecli.create_pvc_(pvc,namesapce)
-        time.sleep(1.5)
     return PVC_ID
 
 def check_pvc_status(namesapce, timeout=5 * 60):
@@ -293,10 +287,9 @@ class FaultSetter():
         if self.kind == 'interface_down':
             self.node_running_vip = self.get_res_running_node(self.vip)
             self.node_running_controller = self.get_res_running_node(self.linstor_controller)
-            # self.actuator.change_node_interface(False)
+            self.actuator.change_node_interface(False)
         elif self.kind == 'switch_port_down':
-            # self.actuator.change_switch_port(False)
-            pass
+            self.actuator.change_switch_port(False)
 
     def manual_setting(self,timeout=2):
         if self.kind == 'manual':
@@ -311,11 +304,9 @@ class FaultSetter():
     def recover(self):
         # 故障恢复
         if self.kind == 'switch_port_down':
-            # self.actuator.change_switch_port(True)
-            pass
+            self.actuator.change_switch_port(True)
         elif self.kind == 'interface_down':
-            # self.actuator.change_node_interface(True)
-            pass
+            self.actuator.change_node_interface(True)
 
 
     def check_running_node(self):
@@ -324,14 +315,10 @@ class FaultSetter():
         node_controller_now = self.get_res_running_node(self.linstor_controller)
 
         if node_vip_now != self.node_running_vip:
-            print(node_vip_now)
-            print(self.node_running_vip)
             logging.info(f"The vip resource has been transferred: {node_vip_now} ")
             is_transferred = True
 
         if node_controller_now != self.node_running_controller:
-            print(node_controller_now)
-            print(self.node_running_controller)
             logging.info(f"The linstor controller has been transferred: {node_vip_now} ")
             is_transferred = True
 

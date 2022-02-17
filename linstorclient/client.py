@@ -111,10 +111,8 @@ def get_volume_state(volume_states, volume_nr):
 
 def get_resource(node=None,storagepool=None,resource=None):
     while True:
-        print(".")
         try:
             msg = cli.volume_list(node,storagepool,resource)[0]
-            print(msg)
             break
         except linstor.errors.LinstorNetworkError:
             logging.error("Failed to connect to linstor, automatic retry later(linstor.errors.LinstorNetworkError)")
