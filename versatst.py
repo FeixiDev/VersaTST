@@ -23,7 +23,7 @@ import kraken.application_outage.actions as application_outage
 import kraken.spof_scenarios.setup as spof_scenarios
 import kraken.performance_scenarios.VersaTST_performance as per_scenarios
 import kraken.performance_scenarios.Performance_scenarios as scenarios
-import kraken.pvc_demo.setup as pvc_demo
+import kraken.pvc_scenarios.setup as pvc_scenarios
 import server as server
 
 
@@ -220,7 +220,7 @@ def main(cfg):
                             # PVC scenarios
                             elif scenario_type == "pvc_scenarios":
                                 logging.info("Running pvc scenario")
-                                pvc_demo.run(scenarios_list, config)
+                                pvc_scenarios.run(scenarios_list, config)
 
                             elif scenario_type == "spof_scenarios":
                                 logging.info("Running spof scenario")

@@ -10,8 +10,8 @@ kraken:
     chaos_scenarios:                                       # List of policies/chaos scenarios to load
         -   pvc_scenarios:
             - -    ./res_file/scenarios_pvc.yaml
-            - -    ./res_file/scenarios_pod.yaml
-            - -    scenarios/spof_scenario.yaml
+            - -    scenarios_pod.yaml
+            - -    scenarios/pvc_scenario.yaml
                                              # List of chaos pod scenarios to load    
         # -   spof_scenarios:                                 # List of chaos pod scenarios to load
         #     - -    ./res_file/spof_pvc.yaml
