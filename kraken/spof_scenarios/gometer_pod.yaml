@@ -1,8 +1,7 @@
 apiVersion: v1
 kind: Pod   
 metadata:     
-  name: go-meter       
-  namespace: kraken     
+  name: go-meter           
 spec:
   containers:
   - name: gometer

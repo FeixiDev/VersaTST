@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: spof-tp
+spec:
+  containers:
+  - name: spoftp
+    image: ubuntu
+    command: ["/bin/bash", "-ce", "tail -f /dev/null"]
+    volumeMounts:
+    - name: datablk
+      mountPath: /mnt/data
+  volumes:
+  - name: datablk
+    persistentVolumeClaim:
+      claimName: spofpvc
+
