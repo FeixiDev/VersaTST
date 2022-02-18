@@ -353,7 +353,6 @@ class IscsiTest(object):
                 times = times - 1
             if resource_status:
                 for status in resource_status:
-                    print(status)
                     if status[1] != "Ok":
                         if not "Connecting" in status[1]:
                             flag = flag + 1
@@ -384,7 +383,6 @@ class IscsiTest(object):
         while(times):
             resource_status_result = stor_obj.get_linstor_res(all_lun_string)
             resource_status = check_drbd_conns_status(resource_status_result)
-            print(resource_status)
             if resource_status:
                 break
             time.sleep(1)

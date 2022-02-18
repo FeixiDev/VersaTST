@@ -112,7 +112,7 @@ def get_storageclass():
 def create_pvc(pvcfile):
     with open(path.join(path.dirname(__file__), pvcfile)) as f:
         pvc = yaml.safe_load(f)
-        resp = cli.create_namespaced_persistent_volume_claim(body=pvc,namespace="kraken")
+        resp = cli.create_namespaced_persistent_volume_claim(body=pvc,namespace="default")
         logging.info("Pvc created. name='%s'" % resp.metadata.name)
 
         return "pvc-"+resp.metadata.uid
@@ -130,7 +130,7 @@ def create_pvc_(body,namespace):
 def create_dep(depfile):    
     with open(path.join(path.dirname(__file__), depfile)) as f:
         dep = yaml.safe_load(f)
-        resp = cli_dep.create_namespaced_deployment(body=dep,namespace="kraken")
+        resp = cli_dep.create_namespaced_deployment(body=dep,namespace="default")
         logging.info("Deployment created. status='%s'" % resp.metadata.name)
 
 
@@ -140,8 +140,8 @@ def delete_pvc(pvcfile):
         config_yaml = yaml.full_load(f)
         scenario_config = config_yaml["metadata"]
         pvc_name = scenario_config.get("name", "")
-        resp = cli.delete_namespaced_persistent_volume_claim(name=pvc_name,namespace="kraken")
-        logging.info("Pvc delete. status='%s'" % resp.metadata.name)
+        resp = cli.delete_namespaced_persistent_volume_claim(name=pvc_name,namespace="default")
+        logging.info("Pvc delete")
 
 def delete_pvc_(name,namespace):
     try:
@@ -164,7 +164,7 @@ def delete_dep(depfile):
         config_yaml = yaml.full_load(f) 
         scenario_config = config_yaml["metadata"]
         dep_name = scenario_config.get("name", "")
-        resp = cli_dep.delete_namespaced_deployment(name=dep_name,namespace="kraken")
+        resp = cli_dep.delete_namespaced_deployment(name=dep_name,namespace="default")
         logging.info("Deployment delete")
 
 def delete_pod(name, namespace):

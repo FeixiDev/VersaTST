@@ -18,7 +18,7 @@ import sshv.control as control
 
 def run(scenarios_list, config):
 
-	namespace = "kraken"
+	namespace = "default"
 	failed_post_scenarios = ""
 	go_meter_pod = ""
 	lins_blkpvc_file = scenarios_list[0][0]
@@ -32,6 +32,8 @@ def run(scenarios_list, config):
 	kind = stor_config.get_kind()
 	times = int(stor_config.get_number_of_times())
 
+	versa_con = control.IscsiTest(stor_config)
+
 	pvc_resoure = kubecli.create_pvc(lins_blkpvc_file)
 	time.sleep(20)
 	
@@ -43,7 +45,6 @@ def run(scenarios_list, config):
 
 	time.sleep(2)
 
-	versa_con = control.IscsiTest(stor_config)
 
 	err = versa_con.ckeck_drbd_status_spof(pvc_resoure, False)
 	if not err:	
@@ -127,8 +128,6 @@ def run(scenarios_list, config):
 			clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)
 			exit(1)		
 
-		time.sleep(360)
-
 		err = versa_con.ckeck_drbd_status_spof(pvc_resoure, down)
 		if not err:	
 			err = versa_con.check_drbd_crm_res(pvc_resoure, down)
@@ -156,7 +155,7 @@ def run(scenarios_list, config):
 
 
 def runtst(scenarios_list, config):
-	namespace = "kraken"
+	namespace = "default"
 	failed_post_scenarios = ""
 	#for app_config in scenarios_list:
 
@@ -179,58 +178,12 @@ def clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file):
 	kubecli.delete_pod(go_meter_pod, namespace)
 	kubecli.delete_pvc(lins_blkpvc_file)
 
-def runc(scenarios_list, config):
-	namespace = "kraken"
-	failed_post_scenarios = ""
-	#for app_config in scenarios_list:
-
-	lins_blkpvc_file = scenarios_list[0][0]
-	pvc_resoure = kubecli.create_pvc(lins_blkpvc_file)
-	print(pvc_resoure_name)
-	time.sleep(30)
-
-	gomet_pod_file = scenarios_list[1][0]
-	with open(path.join(path.dirname(__file__), gomet_pod_file)) as f:
-		gomet_pod_config = yaml.safe_load(f)
-		kubecli.create_pod(gomet_pod_config, namespace, 120)
-
-
-def rundd(scenarios_list, config):
-	namespace = "kraken"
-	failed_post_scenarios = ""
-	#for app_config in scenarios_list:
-
-	lins_blkpvc_file = scenarios_list[0][0]
-
-	gomet_pod_file = scenarios_list[1][0]
-
-
-	kubecli.delete_pvc(lins_blkpvc_file)
-
-
-def rundd(scenarios_list, config):
-	namespace = "kraken"
-	failed_post_scenarios = ""
-	#for app_config in scenarios_list:
-
-	lins_blkpvc_file = scenarios_list[0][0]
-
-	gomet_pod_file = scenarios_list[1][0]
-
-
-	with open(path.join(path.dirname(__file__), gomet_pod_file)) as f:
-		gomet_pod_config = yaml.full_load(f)
-		scenario_config = gomet_pod_config["metadata"]
-		pod_name = scenario_config.get("name", "")
-		kubecli.delete_pod(pod_name, namespace)
-
-	kubecli.delete_pvc(lins_blkpvc_file)
 
 
 def gometer_write(pod_name, write_q):
 
 	command = "cd /go/src/app;./main write"
-	response = kubecli.exec_cmd_in_pod(command, pod_name, "kraken")
+	response = kubecli.exec_cmd_in_pod(command, pod_name, "default")
 	logging.info("\n" + str(response))
 	if "Finish" in response:
 		write_q.put(0)
