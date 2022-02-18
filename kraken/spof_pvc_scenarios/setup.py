@@ -1,7 +1,6 @@
 import subprocess
 import re
 from charset_normalizer import logging
-from matplotlib import set_loglevel
 import yaml
 import time
 import signal
@@ -123,6 +122,7 @@ def run(scenarios_list, config):
             logging.info("environment does not pass inspection")
             logging.info("collect logs")
             collect_pvc_describe(NAME_SPACE)
+            collect_drbd_log(NAME_SPACE)
             actuator.get_log(False)
             return
 
@@ -165,7 +165,7 @@ def check_pvc_status(namesapce, timeout=5 * 60):
 
 def check_drbd_status(namespace,timeout= 60):
     time_end = time.time() + timeout
-    pvcs = kubecli.list_pv(namespace=namespace)
+    pvs = kubecli.list_pv(namespace=namespace)
     replicas = 3
     success_flag = ['UpToDate','Diskless']
 
@@ -173,15 +173,15 @@ def check_drbd_status(namespace,timeout= 60):
     while time.time() <= time_end:
         success_pvc = 0
         resources = linstorcli.get_resource()
-        for pvc in pvcs:
+        for pv in pvs:
             success_res = 0
             for res in resources:
-                if res["Resource"] == pvc and res["State"] in success_flag:
+                if res["Resource"] == pv and res["State"] in success_flag:
                     success_res += 1
             if success_res == replicas:
                 success_pvc += 1
 
-        if len(pvcs) == success_pvc:
+        if len(pvs) == success_pvc:
             return True
         
         time.sleep(5)
@@ -217,14 +217,14 @@ def is_clean(namespace, timeout= 3*60):
 def check_env(pvc,namespace):
     global PVC_ID
     PVC_ID += 1
-    pvc['metadata']['name'] = f'pvc-test{PVC_ID}'
+    pvc['metadata']['name'] = f'pvc-test-check-env-{PVC_ID}'
     kubecli.create_pvc_(pvc,NAME_SPACE)
     if check_pvc_status(NAME_SPACE) and check_drbd_status(NAME_SPACE):
         kubecli.delete_pvc_(pvc['metadata']['name'],namespace)
-    
-    # 检查删除情况
-    if is_clean(namespace):
-        return True
+        # 检查删除情况
+        if is_clean(namespace):
+            return True
+
 
 def collect_pvc_describe(namespace):
     # 收集状态不是Bound的 pvc 的相关信息
@@ -237,16 +237,21 @@ def collect_pvc_describe(namespace):
             logging.error(describe)
 
 def collect_drbd_log(namespace):
-    pvcs = kubecli.list_pv(namespace=namespace)
+    pvs = kubecli.list_pv(namespace=namespace)
     success_flag = ['UpToDate','Diskless']
     resources = linstorcli.get_resource()
+    pvcs = []
 
-    for pvc in pvcs:
+
+    for pv in pvs:
         for res in resources:
-            if res["Resource"] == pvc and res["State"]  not in success_flag:
+            if res["Resource"] == pv and res["State"]  not in success_flag:
                 # 收集日志
-                describe = get_pvc_describe(pvc,namespace)
-                logging.error(describe)
+                pvcs.append(kubecli.get_pvc(pv))
+    pvcs = set(pvcs)
+    for pvc in pvcs:
+        describe = get_pvc_describe(pvc,namespace)
+        logging.error(describe)
 
 def get_pvc_describe(pvc,namespace):
     pvc_descibe =  subprocess.getoutput(f'kubectl describe pvc {pvc} -n {namespace}')

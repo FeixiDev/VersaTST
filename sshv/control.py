@@ -316,7 +316,6 @@ class IscsiTest(object):
                 if on:
                     ssh.up_interface(interface)
                 else:   
-                    print(interface)
                     ssh.down_interface(interface)
 
 

@@ -16,10 +16,12 @@ kraken_node_name = ""
 def initialize_clients(kubeconfig_path):
     global cli
     global cli_dep
+    print("initialize_clients")
     try:
         config.load_kube_config(kubeconfig_path)
         cli = client.CoreV1Api()
         cli_dep= client.AppsV1Api()
+        print("结束 initialize_clients")
     except ApiException as e:
         logging.error("Failed to initialize kubernetes client: %s\n" % e)
         sys.exit(1)
@@ -70,6 +72,15 @@ def list_pv(label_selector=None,namespace=None):
         if pvc.metadata.namespace == namespace:
             pv_list.append(pvc.spec.volume_name)
     return pv_list
+
+def get_pvc(pv):
+    try:
+        ret = cli.list_persistent_volume_claim_for_all_namespaces(pretty=True)
+    except ApiException as e:
+        logging.error("Exception when calling CoreV1Api->list_persistent_volume_claim_for_all_namespaces: %s\n" % e)
+    for pvc in ret.items:
+        if pvc.spec.volume_name == pv:
+            return pvc.metadata.name
 
 def get_pvc_status(name, namespace):
     pvc_status = {}

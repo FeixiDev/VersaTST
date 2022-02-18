@@ -18,8 +18,6 @@ import sshv.control as control
 
 def run(scenarios_list, config):
 
-	return
-
 	namespace = "kraken"
 	failed_post_scenarios = ""
 	go_meter_pod = ""
@@ -238,7 +236,6 @@ def gometer_write(pod_name, write_q):
 		write_q.put(0)
 	else:
 		write_q.put(1)
-
 
 
 

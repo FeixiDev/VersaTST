@@ -161,7 +161,7 @@ def get_resource(node=None,storagepool=None,resource=None):
                         # 'InUse':rsc_usage,
                         'State':vlm_state.disk_state,
                         })
-    return lst
 
+    return lst
 
 
