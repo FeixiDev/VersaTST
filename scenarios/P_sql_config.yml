@@ -1,0 +1,57 @@
+# SQL_view.py
+wanted data view: '*'
+table view: [Auto_GZ_2201191007_Auto_type,Auto_GZ_2201191100_Auto_type]
+
+# Input.py
+file input: '01_19_15_26_results.txt'
+Key ID: '48888'
+Client Name: 'ranrw888'
+Date: '20220219' #format example:20210101
+Disk Type: 'bc'
+
+# SQL_select.py
+wanted data: '*'
+table: [Auto_GZ_2201191007_Auto_type]
+statement: 'Number_of_Job = "8" AND IOdepth = "8"'
+
+# SQL_select_two_table.py
+wanted data1: '*'
+table1: 'Auto_GZ_2201191007_Auto_type'
+statement1: 'Number_of_Job = "8" AND IOdepth = "8"'
+wanted data2: '*'
+table2: 'Auto_GZ_2201191013_Auto_type'
+statement2: 'Number_of_Job = "8" AND IOdepth = "8"'
+
+# SQL_chart.py
+Select_Data: 'IOPS' # IOPS / MBPS 
+Table_Names: 'Auto_GZ_2201191013_Auto_type'
+ReadWrite_Type: '"read"' # read, write, randread, randwrite
+Number_of_Job: '"8"'
+IOdepth: '"8"'
+
+# chart_readwrite.py
+Select_Data_rw: 'IOPS' # IOPS / MBPS 
+Table_Names_rw: 'Auto_GZ_2201191013_Auto_type'
+Number_of_Job_rw: '"8"'
+IOdepth_rw: '"8"'
+
+# SQL_histogram.py
+Select_Data_hist: 'IOPS' # IOPS / MBPS 
+Table_hist: [Auto_GZ_2201191013_Auto_type]
+Readwrite_hist: '"read"' # read, write, randread, ranwrite
+Number_of_Job_hist: '"8"' 
+IOdepth_hist: '"8"'
+Blocksize_hist: '"4k"' # 4k / 1M
+
+# SQL_deviation.pys
+Standard_Value: IOPS # IOPS / MBPS
+Table_Name_devi_1: 'Auto_GZ_2201191013_Auto_type'
+ReadWrite_Type_Stan: '"read"' # # read, write, randread, ranwrite
+Blocksize_Stan: '"2k"' # used for one standard
+
+Example_Value: IOPS # IOPS / MBPS
+Table_Name_devi_2: 'Auto_GZ_2201191013_Auto_type'
+ReadWrite_Type_Ex: '"write"' # # read, write, randread, ranwrite
+
+
+

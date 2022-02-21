@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod   
+metadata:     
+  name: go-meter           
+spec:
+  containers:
+  - name: gometer
+    image: go-meter
+    imagePullPolicy: Never
+    command: ["/bin/bash", "-ce", "tail -f /dev/null"]
+    volumeDevices:
+    - name: datablk
+      devicePath: /dev/sde
+  volumes:
+  - name: datablk
+    persistentVolumeClaim:
+      claimName: spofblkpvc

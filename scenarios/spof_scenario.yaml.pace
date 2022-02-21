@@ -1,0 +1,49 @@
+log_path: /home/ubuntu/versatstcrm
+kind: interface_down  #node_down, interface_down, switch_port_down, hand_operation
+times: 3
+spof_scenario:
+  down_switch:
+    ip: 10.203.1.202
+    port: eth-0-1
+  down_interface_host:
+    hostname: ubuntu
+    port: 22
+    public_ip: 10.203.1.162
+    password: password
+    interface: ens192
+  down_host:
+    hostname: ubuntu
+    port: 22
+    public_ip: 10.203.1.162
+    password: password
+versaplx:
+  - hostname: test2
+    public_ip: 10.203.1.185
+    port: 22
+    password: password
+  - hostname: test1
+    public_ip: 10.203.1.76
+    port: 22
+    password: password
+  - hostname: mattie2
+    public_ip: 10.203.1.183
+    port: 22
+    password: password
+  - hostname: ubuntu
+    public_ip: 10.203.1.162
+    port: 22
+    password: password
+
+
+
+
+
+# - hostname: ubuntu
+#   public_ip: 10.203.1.101
+#   port: 22
+#   password: Feixi@123
+# - hostname: km99
+#   public_ip: 10.203.1.99
+#   port: 22
+#   password: Feixi@123
+
