@@ -315,7 +315,7 @@ class IscsiTest(object):
             if utils.get_global_dict_value(ssh) == interface_ip:
                 if on:
                     ssh.up_interface(interface)
-                else:
+                else:   
                     ssh.down_interface(interface)
 
 
