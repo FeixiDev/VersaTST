@@ -284,6 +284,14 @@ class SSHConn(object):
             logging.info("Shutdowned node")
             return True
 
+    def reboot(self):
+        print('reboot')
+        cmd = "ls"
+        result = self.exec_cmd(cmd)
+        if result["st"]:
+            logging.info("reboot node")
+            return True
+
     def sftp_upload(self, local, remote):
         sf = paramiko.Transport((self._host, self._port))
         sf.connect(username=self._username, password=self._password)
@@ -509,7 +517,6 @@ class ConfFile(object):
         password = down_host["password"]
         return {"hostname":hostname,"port":port,"ip":ip,"password":password}
 
-
     @deco_yaml_dict
     def get_switch_port(self):
         hostn_list = []
@@ -520,4 +527,11 @@ class ConfFile(object):
 
         return {"ip":ip, "port":port}
 
+    @deco_yaml_dict
+    def get_nodes_configs(self):
+        scenario_config = self.config["cluster_shut_down_scenario"]
+        for node in scenario_config["nodes"]:
+            if not check_ip(node['public_ip']):
+                prt_log(None, f"Please check the config of {node['public_ip']}", 2)
+        return scenario_config["nodes"]
 

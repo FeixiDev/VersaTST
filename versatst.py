@@ -21,8 +21,8 @@ import kraken.kube_burner.client as kube_burner
 import kraken.zone_outage.actions as zone_outages
 import kraken.application_outage.actions as application_outage
 import kraken.spof_scenarios.setup as spof_scenarios
-import kraken.performance_scenarios.VersaTST_performance as per_scenarios
-import kraken.performance_scenarios.Performance_scenarios as scenarios
+#import kraken.performance_scenarios.VersaTST_performance as per_scenarios
+#import kraken.performance_scenarios.Performance_scenarios as scenarios
 import kraken.pvc_scenarios.setup as pvc_scenarios
 import server as server
 
@@ -37,7 +37,7 @@ def main(cfg):
     # Start kraken
     print(pyfiglet.figlet_format("VersaTST"))
     logging.info("Starting VersaTST")
-    check_log_dir = scenarios.Check_log_dir()
+    #check_log_dir = scenarios.Check_log_dir()
 
     # Parse and read the config
     if os.path.isfile(cfg):
@@ -198,7 +198,7 @@ def main(cfg):
 
                             # Inject cluster shutdown scenarios
                             elif scenario_type == "cluster_shut_down_scenarios":
-                                shut_down.run(scenarios_list, config, wait_duration)
+                                shut_down.run(scenarios_list, config)
 
                             # Inject namespace chaos scenarios
                             elif scenario_type == "namespace_scenarios":
@@ -283,11 +283,11 @@ def main(cfg):
                 if scenario_type == "down_nic_scenarios":
                     signal = True
                     scenarios_list = list(chaos_scenarios[1].values())[0]
-                    per_scenarios.run(scenarios_list,config,signal=signal)
+                    #per_scenarios.run(scenarios_list,config,signal=signal)
                     sys.exit(1)
 
-                if scenario_type == "performance_scenarios":
-                    per_scenarios.run(scenarios_list,config)
+                #if scenario_type == "performance_scenarios":
+                    #per_scenarios.run(scenarios_list,config)
     else:
         logging.error("Cannot find a config at %s, please check" % (cfg))
         sys.exit(1)

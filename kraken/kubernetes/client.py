@@ -220,6 +220,13 @@ def get_all_pods(label_selector=None):
         pods.append([pod.metadata.name, pod.metadata.namespace])
     return pods
 
+def check_all_pods():
+    err = False
+    ret = cli.list_pod_for_all_namespaces(pretty=True)
+    for pod in ret.items:
+        if(pod.status.phase == "Pending" or pod.status.phase == "Failed"):
+            err = True
+    return err
 
 # Execute command in pod
 def exec_cmd_in_pod(command, pod_name, namespace, container=None):
