@@ -125,7 +125,7 @@ class sql_write_excel (object):
         self.iodepth = iodepth
         self.numjobs = numjobs
         self.excel_name = self.table_n + '_' + self.rwType + '.csv'
-         if "filename" in self.dict_data:
+        if "filename" in self.dict_data:
             self.parameter_dict =  {'filename': '\\w+', 'rw': self.rwType, 'bs': '\\w+', 'iodepth': self.iodepth, 'numjobs': self.numjobs}
             filename_value='true'
         else:
