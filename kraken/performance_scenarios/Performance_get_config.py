@@ -228,7 +228,6 @@ class Run_performance_case():
         if len(directory_list) != 0:
             for i in directory_list:
                 command='rm -f ' + i + '/*'
-                print('commanddddddddddd',command)
                 subprocess.call (command,shell=True)
 
 
