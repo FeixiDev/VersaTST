@@ -219,8 +219,18 @@ class Run_performance_case():
 
 
     def clear_copy(self):
-        command='rm -f /drbd_test/*'
-        subprocess.call (command,shell=True)
+        directory_list = []
+        for i in range(len(self.perforamce_setting_list)):
+            if 'directory' in self.perforamce_setting_list[i]:
+                aa = self.perforamce_setting_list[i]['directory']
+                directory_list.append(aa)
+        directory_list = list(set(directory_list))
+        if len(directory_list) != 0:
+            for i in directory_list:
+                command='rm -f ' + i + '/*'
+                print('commanddddddddddd',command)
+                subprocess.call (command,shell=True)
+
 
 
     def run_fio(self):

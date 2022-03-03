@@ -125,7 +125,11 @@ class sql_write_excel (object):
         self.iodepth = iodepth
         self.numjobs = numjobs
         self.excel_name = self.table_n + '_' + self.rwType + '.csv'
-        self.parameter_dict =  {'filename': '\\w+', 'rw': self.rwType, 'bs': '\\w+', 'iodepth': self.iodepth, 'numjobs': self.numjobs}
+         if "filename" in self.dict_data:
+            self.parameter_dict =  {'filename': '\\w+', 'rw': self.rwType, 'bs': '\\w+', 'iodepth': self.iodepth, 'numjobs': self.numjobs}
+            filename_value='true'
+        else:
+            self.parameter_dict =  {'filename': '\\w+', 'rw': self.rwType, 'bs': '\\w+', 'iodepth': self.iodepth, 'numjobs': self.numjobs}
 
         wb = Workbook(encoding='utf-8')
         table = wb.add_sheet('IOPS',cell_overwrite_ok=True)
@@ -143,7 +147,11 @@ class sql_write_excel (object):
                     for row in range(int(number)):
                         sheet.write(2+row,i+1,self.MBPS_list[i+len(self.dict_data[value])*row])
                         table.write(2+row,i+1,self.IOPS_list[i+len(self.dict_data[value])*row]) 
-        attri_l=['rw','filename']
+        if filename_value == 'true':
+            attri_l=['rw','filename']
+        else:
+            attri_l=['rw','directory']
+
         for value in attri_l:
             if self.parameter_dict[value]=='\w+':
                 for i in range(len(self.dict_data[value])):
