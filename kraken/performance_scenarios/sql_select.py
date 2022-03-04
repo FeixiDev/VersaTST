@@ -130,7 +130,7 @@ class sql_write_excel (object):
             filename_value='true'
         else:
             self.parameter_dict =  {'filename': '\\w+', 'rw': self.rwType, 'bs': '\\w+', 'iodepth': self.iodepth, 'numjobs': self.numjobs}
-
+            filename_value='false'
         wb = Workbook(encoding='utf-8')
         table = wb.add_sheet('IOPS',cell_overwrite_ok=True)
         sheet = wb.add_sheet('MBPS',cell_overwrite_ok=True)
