@@ -26,6 +26,7 @@ import kraken.performance_scenarios.Performance_scenarios as scenarios
 import kraken.pvc_scenarios.setup as pvc_scenarios
 import server as server
 
+import linstorclient.client as linstorcli
 import sshv.utils as utils
 import sshv.log as log
 
