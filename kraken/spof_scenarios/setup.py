@@ -2,7 +2,6 @@ import sys
 import yaml
 import re
 import json
-import logging
 import threading
 import queue
 import time
@@ -25,9 +24,7 @@ def run(scenarios_list, config):
 	gomet_pod_file = scenarios_list[1][0]
 	stor_file = scenarios_list[2][0]
 	write_q = queue.Queue(maxsize = 1)
-	utils._init()
-	logger = log.Log()
-	utils.set_logger(logger)
+
 	stor_config = utils.ConfFile(stor_file)
 	kind = stor_config.get_kind()
 	times = int(stor_config.get_number_of_times())
@@ -60,8 +57,8 @@ def run(scenarios_list, config):
 
 	left_times = times
 	while(left_times):
-		down = False	
-		logging.info("Times %d: For single failure, Go-meter start to write", times - left_times)
+		down = False
+		utils.prt_log('', "Times %d: For single failure, Go-meter start to write" % (times - left_times),0)	
 		threading.Thread(target=gometer_write, args=(go_meter_pod, write_q)).start()
 		if kind == "node_down":
 			versa_con.down_node()
@@ -71,12 +68,11 @@ def run(scenarios_list, config):
 		elif kind == "switch_port_down":
 			versa_con.change_switch_port(False)
 		elif kind == "hand_operation":
-			logging.info("Please do hand operation...")
-
-		logging.info("Go-meter is writing, wait...")
+			utils.prt_log('', "Go-meter start to write",0)
+		utils.prt_log('', "Go-meter start to write",0)
 		err = write_q.get()
 		if err:
-			utils.prt_log('', f"Go meter write failed",1)
+			utils.prt_log('', "Go meter write failed",0)
 			versa_con.get_log(down)
 			clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)
 			exit(1)			
@@ -93,14 +89,13 @@ def run(scenarios_list, config):
 		# 	clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)
 		# 	exit(1)
 
-
-		logging.info("Go-meter start to compare")
+		utils.prt_log('', "Go-meter start to compare",0)
 		command = "cd /go/src/app;./main compare"
 		response = kubecli.exec_cmd_in_pod(command, go_meter_pod, namespace)
-		logging.info("\n" + str(response))
+		utils.prt_log('', "\n" + str(response),0)
 
 		if not "Finish" in response:
-			utils.prt_log('', f"Go meter compare failed",1)
+			utils.prt_log('', "Go meter compare failed",0)
 			if kind == "interface_down":
 				versa_con.change_node_interface(True)
 			elif kind == "switch_port_down":
@@ -109,7 +104,7 @@ def run(scenarios_list, config):
 			clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)
 			exit(1)
 
-		logging.info("Times %d:For fix single failure, Go-meter start to write", times - left_times)
+		utils.prt_log('', "Times %d:For fix single failure, Go-meter start to write" % (times - left_times),0)
 		threading.Thread(target=gometer_write, args=(go_meter_pod, write_q)).start()
 
 		if kind == "interface_down":
@@ -117,13 +112,13 @@ def run(scenarios_list, config):
 		elif kind == "switch_port_down":
 			versa_con.change_switch_port(True)
 		elif kind == "hand_operation":
-			logging.info("Please do hand operation...")
+			utils.prt_log('', "Please do hand operation...",0)
 
 		down = False
-		logging.info("Go-meter is writing, wait...")
+		utils.prt_log('', "Go-meter is writing, wait...",0)
 		err = write_q.get()
 		if err:
-			utils.prt_log('', f"Go meter write failed",1)
+			utils.prt_log('', "Go meter write failed",0)
 			versa_con.get_log(down)
 			clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)
 			exit(1)		
@@ -138,14 +133,13 @@ def run(scenarios_list, config):
 		# if err:
 		# 	clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)
 		# 	exit(1)
-
-		logging.info("Go-meter start to compare")
+		utils.prt_log('', "Go-meter start to compare",0)
 		command = "cd /go/src/app;./main compare"
 		response = kubecli.exec_cmd_in_pod(command, go_meter_pod, namespace)
-		logging.info("\n" + str(response))
+		utils.prt_log('', "\n" + str(response),0)
 
 		if not "Finish" in response:
-			utils.prt_log('', f"Go meter compare failed",1)
+			utils.prt_log('', "Go meter compare failed",0)
 			versa_con.get_log(down)
 			clear_pvc_and_pod(go_meter_pod,namespace,lins_blkpvc_file)
 			exit(1)
@@ -162,9 +156,7 @@ def runtst(scenarios_list, config):
 	lins_blkpvc_file = scenarios_list[0][0]
 	stor_file = scenarios_list[2][0]
 	gomet_pod_file = scenarios_list[1][0]
-	utils._init()
-	logger = log.Log()
-	utils.set_logger(logger)
+
 	stor_config = utils.ConfFile(stor_file)
 
 	versa_con = control.IscsiTest(stor_config)
@@ -184,7 +176,7 @@ def gometer_write(pod_name, write_q):
 
 	command = "cd /go/src/app;./main write"
 	response = kubecli.exec_cmd_in_pod(command, pod_name, "default")
-	logging.info("\n" + str(response))
+	utils.prt_log('', "\n" + str(response),0)
 	if "Finish" in response:
 		write_q.put(0)
 	else:

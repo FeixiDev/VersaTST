@@ -8,6 +8,7 @@ import re
 import yaml
 from os import path
 import time
+import sshv.utils as utils
 
 kraken_node_name = ""
 
@@ -21,7 +22,7 @@ def initialize_clients(kubeconfig_path):
         cli = client.CoreV1Api()
         cli_dep= client.AppsV1Api()
     except ApiException as e:
-        logging.error("Failed to initialize kubernetes client: %s\n" % e)
+        utils.prt_log('', "Failed to initialize kubernetes client: %s\n" % e,0)
         sys.exit(1)
 
 
@@ -29,7 +30,7 @@ def create_pvc(pvcfile):
     with open(path.join(path.dirname(__file__), pvcfile)) as f:
         pvc = yaml.safe_load(f)
         resp = cli.create_namespaced_persistent_volume_claim(body=pvc,namespace="default")
-        logging.info("Pvc created. name='%s'" % resp.metadata.name)
+        utils.prt_log('', "Pvc created. name='%s'" % resp.metadata.name,0)
 
         return "pvc-"+resp.metadata.uid
 
@@ -38,7 +39,7 @@ def create_dep(depfile):
     with open(path.join(path.dirname(__file__), depfile)) as f:
         dep = yaml.safe_load(f)
         resp = cli_dep.create_namespaced_deployment(body=dep,namespace="default")
-        logging.info("Deployment created. status='%s'" % resp.metadata.name)
+        utils.prt_log('', "Deployment created. status='%s'" % resp.metadata.name,0)
 
 
 def delete_pvc(pvcfile):
@@ -48,7 +49,7 @@ def delete_pvc(pvcfile):
         scenario_config = config_yaml["metadata"]
         pvc_name = scenario_config.get("name", "")
         resp = cli.delete_namespaced_persistent_volume_claim(name=pvc_name,namespace="default")
-        logging.info("Pvc delete")
+        utils.prt_log('', "Pvc delete",0)
 
 def delete_dep(depfile):
     #with open(pvcfile, "r") as f:
@@ -57,7 +58,7 @@ def delete_dep(depfile):
         scenario_config = config_yaml["metadata"]
         dep_name = scenario_config.get("name", "")
         resp = cli_dep.delete_namespaced_deployment(name=dep_name,namespace="default")
-        logging.info("Deployment delete")
+        utils.prt_log('', "Deployment delete",0)
 
 def delete_pod(name, namespace):
     try:
@@ -65,10 +66,10 @@ def delete_pod(name, namespace):
         while cli.read_namespaced_pod(name=name, namespace=namespace):
             time.sleep(1)
     except ApiException:
-        logging.info("Pod already deleted")
+        utils.prt_log('', "Pod already deleted",0)
 
 
-def create_pod(body, namespace, timeout=120):
+def create_pod(body, namespace, timeout=180):
     try:
         pod_stat = None
         pod_stat = cli.create_namespaced_pod(body=body, namespace=namespace)
@@ -76,15 +77,15 @@ def create_pod(body, namespace, timeout=120):
         while True:
             pod_stat = cli.read_namespaced_pod(name=body["metadata"]["name"], namespace=namespace)
             if pod_stat.status.phase == "Running":
-                logging.info("Successfully create pod")
+                utils.prt_log('', "Successfully create pod",0)
                 break
             if time.time() > end_time:
                 raise Exception("Starting pod failed")
             time.sleep(1)
     except Exception as e:
-        logging.error("Pod creation failed %s" % e)
+        utils.prt_log('', "Pod creation failed %s" % e,0)
         if pod_stat:
-            logging.error(pod_stat.status.container_statuses)
+            utils.prt_log('', pod_stat.status.container_statuses,0)
         delete_pod(body["metadata"]["name"], namespace)
         sys.exit(1)
 
@@ -96,15 +97,15 @@ def create_pod_spof(body, namespace, pvcfile, timeout=120):
         while True:
             pod_stat = cli.read_namespaced_pod(name=body["metadata"]["name"], namespace=namespace)
             if pod_stat.status.phase == "Running":
-                logging.info("Successfully create pod")
+                utils.prt_log('', "Successfully create pod",0)
                 break
             if time.time() > end_time:
                 raise Exception("Starting pod failed")
             time.sleep(1)
     except Exception as e:
-        logging.error("Pod creation failed %s" % e)
+        utils.prt_log('', "Pod creation failed %s" % e,0)
         if pod_stat:
-            logging.error(pod_stat.status.container_statuses)
+            utils.prt_log('', pod_stat.status.container_statuses,0)
         delete_pod(body["metadata"]["name"], namespace)
         delete_pvc(pvcfile)
         sys.exit(1)

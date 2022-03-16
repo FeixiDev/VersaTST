@@ -26,10 +26,7 @@ import sshv.control as control
 def run11(scenarios_list, config):
 
     config_file = scenarios_list[0][0]
-    print(config_file)
-    utils._init()
-    logger = log.Log()
-    utils.set_logger(logger)
+
     scenario_config = utils.ConfFile(config_file)
     times = int(scenario_config.get_number_of_times())
 
@@ -56,10 +53,7 @@ def run11(scenarios_list, config):
 def run(scenarios_list, config):
 
     config_file = scenarios_list[0][0]
-    print(config_file)
-    utils._init()
-    logger = log.Log()
-    utils.set_logger(logger)
+    
     scenario_config = utils.ConfFile(config_file)
     times = int(scenario_config.get_number_of_times())
     print(kubecli.check_all_pods())

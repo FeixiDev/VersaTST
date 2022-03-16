@@ -21,7 +21,7 @@ def run(app_config, config):
         namespace = scenario_config.get("namespace", "")
         target_fill_percentage = scenario_config.get("fill_percentage", "50")
         duration = scenario_config.get("duration", 60)
-
+        
         logging.info(
             """Input params:
 pvc_name: '%s'\npod_name: '%s'\nnamespace: '%s'\ntarget_fill_percentage: '%s%%'\nduration: '%ss'"""

@@ -121,14 +121,14 @@ class Log(object):
         #     self.user = get_username()
         # if not self.tid:
         #     self.tid = create_transaction_id()
-        if False:
-            logger.debug(
-                "",
-                extra={
-                    'times': utils.get_times(),
-                    'node': utils.get_global_dict_value(conn),
-                    't1': t1,
-                    't2': t2,
-                    'd1': d1,
-                    'd2': d2,
-                    'data': data})
+        logger.info(
+            data,
+            extra={
+                'times': utils.get_times(),
+                'node': utils.get_global_dict_value(conn),
+                't1': t1,
+                't2': t2,
+                'd1': d1,
+                'd2': d2,
+                'data': data})
+
