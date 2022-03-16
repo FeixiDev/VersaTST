@@ -23,12 +23,14 @@ import kraken.application_outage.actions as application_outage
 import kraken.spof_scenarios.setup as spof_scenarios
 import kraken.performance_scenarios.VersaTST_performance as per_scenarios
 import kraken.performance_scenarios.Performance_scenarios as scenarios
+import kraken.spof_pvc_scenarios.setup as spof_pvc_scenarios
 import kraken.pvc_scenarios.setup as pvc_scenarios
 import server as server
 
-import linstorclient.client as linstorcli
+
 import sshv.utils as utils
 import sshv.log as log
+import linstorclient.client as linstorcli
 
 def publish_kraken_status(status):
     with open("/tmp/kraken_status", "w+") as file:
@@ -226,7 +228,7 @@ def main(cfg):
                                 namespace_actions.run(
                                     scenarios_list, config, wait_duration, failed_post_scenarios, kubeconfig_path
                                 )
-
+                                
                             # Inject zone failures
                             elif scenario_type == "zone_outages":
                                 utils.prt_log('', "Inject zone outages",0)
@@ -244,6 +246,11 @@ def main(cfg):
                                 utils.prt_log('', "Running pvc scenario",0)
                                 #logging.info("Running pvc scenario")
                                 pvc_scenarios.run(scenarios_list, config)
+
+                            elif scenario_type == "spof_pvc_scenarios":
+                                logging.info("Running spof pvc scenario")
+                                linstorcli.initialize_clients()
+                                spof_pvc_scenarios.run(scenarios_list,config)
 
                             elif scenario_type == "spof_scenarios":
                                 utils.prt_log('', "Running spof scenario",0)
@@ -333,6 +340,7 @@ if __name__ == "__main__":
     utils._init()
     logger = log.Log()
     utils.set_logger(logger)
+
     if options.cfg is None:
         utils.prt_log('', "Please check if you have passed the config",0)
         #logging.error("Please check if you have passed the config")
