@@ -22,7 +22,7 @@ def initialize_clients(kubeconfig_path):
         config.load_kube_config(kubeconfig_path)
         cli = client.CoreV1Api()
         cli_dep= client.AppsV1Api()
-        print("结束 initialize_clients")
+        print("end initialize_clients")
     except ApiException as e:
         utils.prt_log('', "Failed to initialize kubernetes client: %s\n" % e,0)
         sys.exit(1)
