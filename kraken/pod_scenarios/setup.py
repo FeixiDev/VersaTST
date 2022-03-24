@@ -33,10 +33,9 @@ def run(kubeconfig_path, scenarios_list, config, failed_post_scenarios, wait_dur
 
         # Display pod scenario logs/actions
         print(scenario_logs)
-
         logging.info("Scenario: %s has been successfully injected!" % (pod_scenario[0]))
         logging.info("Waiting for the specified duration: %s" % (wait_duration))
-        time.sleep(wait_duration)
+        time.sleep(20)
 
         try:
             failed_post_scenarios = post_actions.check_recovery(
@@ -51,6 +50,10 @@ def run(kubeconfig_path, scenarios_list, config, failed_post_scenarios, wait_dur
 
         # publish cerberus status
         cerberus.publish_kraken_status(config, failed_post_scenarios, start_time, end_time)
+    if failed_post_scenarios:
+        logging.error("Killing pods scenario failed")
+        exit(1)
+    logging.info("Killing pods scenario completed")
     return failed_post_scenarios
 
 

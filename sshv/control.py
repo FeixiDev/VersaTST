@@ -138,7 +138,37 @@ class Connect(object):
                     self.list_normal_vplx_ssh.append(ssh_conn)
                 utils.set_global_dict_value(ssh_conn, vplx_config['public_ip'])
 
+class ConnectNormal(object):
+    """
+    通过ssh连接节点，生成连接对象的列表
+    """
+    list_nodes_ssh = []
 
+    def __new__(cls, *args, **kwargs):
+        if not hasattr(cls, '_instance'):
+            ConnectNormal._instance = super().__new__(cls)
+            ConnectNormal._instance.config = args[0]
+            ConnectNormal.get_ssh_conn(ConnectNormal._instance)
+        return ConnectNormal._instance
+
+    def get_ssh_conn(self):
+        local_ip = utils.get_host_ip()
+        nodes_configs = self.config.get_nodes_configs()
+        username = "root"
+        for node_config in nodes_configs:
+            if "username" in node_config.keys():
+                if node_config['username'] is not None:
+                    username = node_config['username']
+
+            if local_ip == node_config['public_ip']:
+                self.list_nodes_ssh.append(None)
+                utils.set_global_dict_value(None, node_config['public_ip'])
+            else:
+
+                ssh_conn = utils.SSHConn(node_config['public_ip'], node_config['port'], username,
+                                            node_config['password'])
+                self.list_nodes_ssh.append(ssh_conn)
+                utils.set_global_dict_value(ssh_conn, node_config['public_ip'])
 
 class TELConn(object):
 
@@ -160,6 +190,7 @@ class TELConn(object):
         time.sleep(2)
         self.tel.write(b"shutdown\n")
         time.sleep(2)
+        utils.prt_log('', f"Shutdown switch interface {port}", 0)
 
 
     def nodown_port(self,port):# time 12s
@@ -173,6 +204,7 @@ class TELConn(object):
         time.sleep(2)
         self.tel.write(b"no shutdown\n")
         time.sleep(2)
+        utils.prt_log('', f"Open switch interface {port}", 0)
 
     def down_port11(self,port):# time 12s
         self.tel.write(b'show boot\n')
@@ -470,3 +502,24 @@ class IscsiTest(object):
         debug_log.get_crm_report_file(time, tmp_path)
         debug_log.download_log(tmp_path, crm_log_path)
         debug_log.rm_log_dir(tmp_path)
+
+class K8sNodes(object):
+    def __init__(self, config):
+        self.config = config
+        self.conn = ConnectNormal(self.config)
+    def down_nodes(self):
+        for ssh in self.conn.list_nodes_ssh:
+            ssh.reboot()
+
+
+
+
+
+
+
+
+
+
+
+
+

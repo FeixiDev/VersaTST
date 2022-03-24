@@ -1,0 +1,18 @@
+#log_path: /home/ubuntu/versatstcrm
+#kind: interface_down  #node_down, interface_down, switch_port_down, hand_operation
+times: 1
+cluster_shut_down_scenario:                          # Scenario to stop all the nodes for specified duration and restart the node
+  shut_down_duration: 150                            # duration in seconds to shut down the cluster          
+  nodes:
+    - hostname: ben1
+      public_ip: 10.203.1.133
+      port: 22
+      password: password
+    # - hostname: ubuntu
+    #   port: 22
+    #   public_ip: 10.203.1.162
+    #   password: password
+    # - hostname: ubuntu
+    #   public_ip: 10.203.1.101
+    #   port: 22
+    #   password: Feixi@123

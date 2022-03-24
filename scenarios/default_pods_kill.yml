@@ -1,0 +1,20 @@
+config:
+  runStrategy:
+    runs: 1
+    maxSecondsBetweenRuns: 30
+    minSecondsBetweenRuns: 1
+scenarios:
+  - name: kill up to 1 pods in any kraken namespace
+    steps:
+    - podAction:
+        matches:
+          - namespace: "kraken"
+        filters:
+          - property:
+             name: "state"
+             value: "Running"
+          - randomSample:
+              size: 1
+        actions:
+          - kill:
+              probability: .7

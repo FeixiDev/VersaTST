@@ -10,7 +10,6 @@ from functools import wraps
 from sshv import log as log
 import os
 from stat import S_ISDIR as isdir
-import logging
 
 def _init():  # 全局变量初始化
     global _GLOBAL_DICT
@@ -59,17 +58,21 @@ def prt_log(conn, str_, warning_level):
     :param logger: Logger object for logging
     :param print_str: Strings to be printed and recorded
     """
+    time_n = time.localtime(time.time())
+    Date = time.strftime('%Y-%m-%d %H:%M:%S',time_n) 
     logger = get_logger()
+
     if warning_level == 0:
-        logging.info(str(str_))
+        print(Date, '[INFO]',str(str_))
         logger.write_to_log(conn, 'INFO', 'INFO', 'finish', 'output', str_)
     elif warning_level == 1:
-        logging.warning(str(str_))
+        print(Date, '[WARNING]',str(str_))
         logger.write_to_log(conn, 'INFO', 'WARNING', 'fail', 'output', str_)
     elif warning_level == 2:
+        print(Date, '[ERROR]',str(str_))
         logger.write_to_log(conn, 'INFO', 'ERROR', 'exit', 'output', str_)
-        logging.error(str(str_))
         sys.exit()
+
 
 
 def deco_yaml_dict(func):
@@ -96,20 +99,20 @@ def exec_cmd(cmd, conn=None):
     logger = get_logger()
     oprt_id = log.create_oprt_id()
     func_name = traceback.extract_stack()[-2][2]
-    logger.write_to_log(conn, 'DATA', 'STR', func_name, '', oprt_id)
-    logger.write_to_log(conn, 'OPRT', 'CMD', func_name, oprt_id, cmd)
+    #logger.write_to_log(conn, 'DATA', 'STR', func_name, '', oprt_id)
+    #logger.write_to_log(conn, 'OPRT', 'CMD', func_name, oprt_id, cmd)
     if conn:
         result = conn.exec_cmd(cmd)
-        logger.write_to_log(conn, 'DATA', 'CMD', func_name, oprt_id, result)
+        #logger.write_to_log(conn, 'DATA', 'CMD', func_name, oprt_id, result)
         return result
     else:
         p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, encoding="utf-8")
         if p.returncode == 0:
             result = p.stdout
-            logger.write_to_log(conn, 'DATA', 'CMD', func_name, oprt_id, {"st": True, "rt": result})
+            #logger.write_to_log(conn, 'DATA', 'CMD', func_name, oprt_id, {"st": True, "rt": result})
             return {"st": True, "rt": result}
         else:
-            logger.write_to_log(conn, 'DATA', 'CMD', func_name, oprt_id, {"st": False, "rt": p.stderr})
+            #logger.write_to_log(conn, 'DATA', 'CMD', func_name, oprt_id, {"st": False, "rt": p.stderr})
             return {"st": False, "rt": p.stderr}
 
 
@@ -117,14 +120,14 @@ def upload_file(local, remote, conn=None):
     logger = get_logger()
     oprt_id = log.create_oprt_id()
     func_name = traceback.extract_stack()[-2][2]
-    logger.write_to_log('', 'DATA', 'STR', func_name, '', oprt_id)
-    logger.write_to_log('', 'OPRT', 'upload', func_name, oprt_id, f"{local} ==> {get_global_dict_value(conn)}:{remote}")
+    #logger.write_to_log('', 'DATA', 'STR', func_name, '', oprt_id)
+    #logger.write_to_log('', 'OPRT', 'upload', func_name, oprt_id, f"{local} ==> {get_global_dict_value(conn)}:{remote}")
     if conn:
         result = conn.sftp_upload(local, remote)
     else:
         cmd = f'cp -r {local} {remote}'
         result = exec_cmd(cmd)
-    logger.write_to_log('', 'DATA', 'upload', func_name, oprt_id, result)
+    #logger.write_to_log('', 'DATA', 'upload', func_name, oprt_id, result)
     return result
 
 
@@ -132,15 +135,15 @@ def download_file(remote, local, conn=None):
     logger = get_logger()
     oprt_id = log.create_oprt_id()
     func_name = traceback.extract_stack()[-2][2]
-    logger.write_to_log('', 'DATA', 'STR', func_name, '', oprt_id)
-    logger.write_to_log('', 'OPRT', 'download', func_name, oprt_id,
-                        f"{get_global_dict_value(conn)}:{remote} ==> {local}")
+    #logger.write_to_log('', 'DATA', 'STR', func_name, '', oprt_id)
+    #logger.write_to_log('', 'OPRT', 'download', func_name, oprt_id,
+    #                    f"{get_global_dict_value(conn)}:{remote} ==> {local}")
     if conn:
         result = conn.sftp_download(remote, local)
     else:
         cmd = f'cp -r {remote} {local}'
         result = exec_cmd(cmd)
-    logger.write_to_log('', 'DATA', 'download', func_name, oprt_id, result)
+    #logger.write_to_log('', 'DATA', 'download', func_name, oprt_id, result)
     return result
 
 
@@ -193,7 +196,7 @@ def re_search(re_string, tgt_string, output_type='bool'):
     oprt_id = log.create_oprt_id()
     re_obj = re.compile(re_string)
     re_result = re_obj.search(tgt_string)
-    logger.write_to_log(None, 'OPRT', 'REGULAR', 're_search', oprt_id, {'re': re_string, 'string': tgt_string})
+    #logger.write_to_log(None, 'OPRT', 'REGULAR', 're_search', oprt_id, {'re': re_string, 'string': tgt_string})
     if re_result:
         if output_type == 'bool':
             re_result = True
@@ -201,7 +204,7 @@ def re_search(re_string, tgt_string, output_type='bool'):
             re_result = re_result.groups()
         if output_type == 'group':
             re_result = re_result.group()
-    logger.write_to_log(None, 'DATA', 'REGULAR', 're_search', oprt_id, re_result)
+    #logger.write_to_log(None, 'DATA', 'REGULAR', 're_search', oprt_id, re_result)
     return re_result
 
 
@@ -209,9 +212,9 @@ def re_findall(re_string, tgt_string):
     logger = get_logger()
     oprt_id = log.create_oprt_id()
     re_obj = re.compile(re_string)
-    logger.write_to_log(None, 'OPRT', 'REGULAR', 're_findall', oprt_id, {'re': re_string, 'string': tgt_string})
+    #logger.write_to_log(None, 'OPRT', 'REGULAR', 're_findall', oprt_id, {'re': re_string, 'string': tgt_string})
     re_result = re_obj.findall(tgt_string)
-    logger.write_to_log(None, 'DATA', 'REGULAR', 're_findall', oprt_id, re_result)
+    #logger.write_to_log(None, 'DATA', 'REGULAR', 're_findall', oprt_id, re_result)
     return re_result
 
 
@@ -225,6 +228,7 @@ class SSHConn(object):
         self._username = username
         self._password = password
         self.SSHConnection = None
+        self.logger = get_logger()
         self.ssh_connect()
 
     def _connect(self):
@@ -267,21 +271,29 @@ class SSHConn(object):
         cmd = f"ifconfig {device} down"
         result = self.exec_cmd(cmd)
         if result["st"]:
-            logging.info("Shutdowned interface: %s",device)
+            prt_log(None, "Shutdowned interface: %s" % device, 0)
             return True
 
     def up_interface(self, device):
         cmd = f"ifconfig {device} up"
         result = self.exec_cmd(cmd)
         if result["st"]:
-            logging.info("Opened interface: %s",device)
+            prt_log(None, "Opened interface: %s" % device, 0)
             return True
 
     def down_self(self):
         cmd = "shutdown now"
         result = self.exec_cmd(cmd)
         if result["st"]:
-            logging.info("Shutdowned node")
+            prt_log(None, "Shutdowned node", 0)
+            return True
+
+    def reboot(self):
+        print('reboot')
+        cmd = "ls"
+        result = self.exec_cmd(cmd)
+        if result["st"]:
+            prt_log(None, "reboot node", 0)
             return True
 
     def sftp_upload(self, local, remote):
@@ -405,7 +417,7 @@ class ConfFile(object):
         try:
             with open(self.yaml_file, 'r', encoding='utf-8') as f:
                 yaml_dict = yaml.safe_load(f)
-                self.logger.write_to_log(None, "DATA", 'INPUT', 'yaml_file', self.yaml_file, yaml_dict)
+                #self.logger.write_to_log(None, "DATA", 'INPUT', 'yaml_file', self.yaml_file, yaml_dict)
             return yaml_dict
         except FileNotFoundError:
             prt_log(None, f"Please check the file name: {self.yaml_file}", 2)
@@ -509,7 +521,6 @@ class ConfFile(object):
         password = down_host["password"]
         return {"hostname":hostname,"port":port,"ip":ip,"password":password}
 
-
     @deco_yaml_dict
     def get_switch_port(self):
         hostn_list = []
@@ -520,4 +531,11 @@ class ConfFile(object):
 
         return {"ip":ip, "port":port}
 
+    @deco_yaml_dict
+    def get_nodes_configs(self):
+        scenario_config = self.config["cluster_shut_down_scenario"]
+        for node in scenario_config["nodes"]:
+            if not check_ip(node['public_ip']):
+                prt_log(None, f"Please check the config of {node['public_ip']}", 2)
+        return scenario_config["nodes"]
 

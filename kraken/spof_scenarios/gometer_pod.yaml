@@ -5,8 +5,8 @@ metadata:
 spec:
   containers:
   - name: gometer
-    image: go-meter
-    imagePullPolicy: Never
+    image: feixitek/go-meter:v1.0.1
+    imagePullPolicy: Always
     command: ["/bin/bash", "-ce", "tail -f /dev/null"]
     volumeDevices:
     - name: datablk
